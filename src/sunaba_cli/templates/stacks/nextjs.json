@@ -1,0 +1,25 @@
+{
+  "_description": "Next.js: vercel CLI + eslint/tailwind extensions (Node.js is in base)",
+  "features": {},
+  "postStartCommand": "bash -lc 'if [ -f package-lock.json ]; then npm ci --ignore-scripts; fi'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss"
+      ]
+    }
+  },
+  "remoteEnv": {
+    "VERCEL_TOKEN": "${localEnv:VERCEL_TOKEN}"
+  },
+  "_bootstrap": [
+    "# --- nextjs/vercel ---",
+    "npm install -g vercel@latest"
+  ],
+  "_dependabot": {
+    "package-ecosystem": "npm",
+    "directory": "/",
+    "schedule": { "interval": "weekly" }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "_description": "Azure CLI + credentials (AZURE_SUBSCRIPTION_ID etc.)",
+  "features": {
+    "ghcr.io/devcontainers/features/azure-cli:1": {}
+  },
+  "remoteEnv": {
+    "AZURE_SUBSCRIPTION_ID": "${localEnv:AZURE_SUBSCRIPTION_ID}",
+    "AZURE_TENANT_ID": "${localEnv:AZURE_TENANT_ID}"
+  },
+  "_bootstrap": [
+    "# --- azure ---",
+    "if command -v az >/dev/null 2>&1; then az extension add --name azure-devops 2>/dev/null || true; fi"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "_description": "docker-outside-of-docker (access host Docker daemon)",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+  "_bootstrap": [
+    "# --- docker ---",
+    "echo 'Docker-outside-of-docker enabled via devcontainer feature'"
+  ]
+}

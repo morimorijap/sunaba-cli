@@ -1,0 +1,15 @@
+{
+  "_description": "AWS CLI + credentials (AWS_ACCESS_KEY_ID etc.)",
+  "features": {
+    "ghcr.io/devcontainers/features/aws-cli:1": {}
+  },
+  "remoteEnv": {
+    "AWS_ACCESS_KEY_ID": "${localEnv:AWS_ACCESS_KEY_ID}",
+    "AWS_SECRET_ACCESS_KEY": "${localEnv:AWS_SECRET_ACCESS_KEY}",
+    "AWS_DEFAULT_REGION": "${localEnv:AWS_DEFAULT_REGION}"
+  },
+  "_bootstrap": [
+    "# --- aws ---",
+    "if ! command -v sam >/dev/null 2>&1; then pip install aws-sam-cli 2>/dev/null || true; fi"
+  ]
+}

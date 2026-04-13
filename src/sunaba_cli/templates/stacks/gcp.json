@@ -1,0 +1,14 @@
+{
+  "_description": "Google Cloud CLI + credentials (GOOGLE_APPLICATION_CREDENTIALS etc.)",
+  "features": {
+    "ghcr.io/devcontainers/features/gcloud:1": {}
+  },
+  "remoteEnv": {
+    "GOOGLE_APPLICATION_CREDENTIALS": "${localEnv:GOOGLE_APPLICATION_CREDENTIALS}",
+    "GCP_PROJECT": "${localEnv:GCP_PROJECT}"
+  },
+  "_bootstrap": [
+    "# --- gcp ---",
+    "echo 'gcloud CLI installed via devcontainer feature'"
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "name": "sunaba-${PROJECT_NAME}",
+  "image": "mcr.microsoft.com/devcontainers/base:jammy",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" }
+  },
+  "mounts": [
+    "source=npm-cache,target=/home/vscode/.npm,type=volume"
+  ],
+  "remoteEnv": {},
+  "postCreateCommand": "bash .devcontainer/bootstrap.sh",
+  "postStartCommand": "",
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "openai.chatgpt",
+        "shd101wyy.markdown-preview-enhanced",
+        "mechatroner.rainbow-csv"
+      ],
+      "settings": {
+        "security.workspace.trust.enabled": false,
+        "files.exclude": {
+          "**/__pycache__": true,
+          "**/*.pyc": true,
+          "**/.venv": true,
+          "**/node_modules": true,
+          "**/.next": true,
+          "**/dist": true,
+          "**/build": true
+        },
+        "files.watcherExclude": {
+          "**/__pycache__/**": true,
+          "**/.venv/**": true,
+          "**/node_modules/**": true,
+          "**/.next/**": true,
+          "**/dist/**": true,
+          "**/build/**": true,
+          "**/.git/objects/**": true,
+          "**/target/**": true
+        },
+        "search.exclude": {
+          "**/__pycache__": true,
+          "**/.venv": true,
+          "**/node_modules": true,
+          "**/.next": true,
+          "**/dist": true,
+          "**/build": true,
+          "**/uv.lock": true,
+          "**/package-lock.json": true
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "_description": "Python 3.14 + uv",
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": { "version": "3.14" }
+  },
+  "mounts": [
+    "source=uv-cache,target=/home/vscode/.cache/uv,type=volume"
+  ],
+  "postStartCommand": "bash -lc 'if [ -f pyproject.toml ]; then uv sync --frozen; fi'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "charliermarsh.ruff"
+      ]
+    }
+  },
+  "_bootstrap": [
+    "# --- python/uv ---",
+    "# Install uv via pip from the devcontainer Python feature (avoids curl|sh RCE).",
+    "if ! command -v uv >/dev/null 2>&1; then pip install --user --quiet uv; fi"
+  ],
+  "_dependabot": {
+    "package-ecosystem": "uv",
+    "directory": "/",
+    "schedule": { "interval": "weekly" }
+  }
+}
