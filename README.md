@@ -240,6 +240,59 @@ before using `sunaba-cli` on sensitive work.
 Report vulnerabilities via GitHub Security Advisories or an issue — see
 [SECURITY.md](SECURITY.md).
 
+## GitHub SSH from inside the container
+
+`sunaba-cli` does **not** copy your SSH keys into the container. Instead, it
+relies on VS Code Dev Containers' built-in **SSH agent forwarding**: your
+host's `ssh-agent` socket is bind-mounted into the container as
+`$SSH_AUTH_SOCK`, so `git push` over SSH works without the private key
+ever leaving the host.
+
+### One-time host setup (macOS)
+
+```bash
+# Load your GitHub key into the macOS keychain (persists across reboots)
+ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+
+# Make sure ~/.ssh/config tells ssh to use the keychain
+cat >> ~/.ssh/config <<'EOF'
+Host *
+  UseKeychain yes
+  AddKeysToAgent yes
+  IdentityFile ~/.ssh/id_ed25519
+EOF
+
+# Verify
+ssh-add -l   # should list your key
+```
+
+On Linux hosts, just running `eval "$(ssh-agent -s)" && ssh-add ~/.ssh/id_ed25519`
+in your shell rc file is enough.
+
+### Verify from inside the container
+
+After reopening the project in the container:
+
+```bash
+echo "$SSH_AUTH_SOCK"      # should print a path, e.g. /tmp/vscode-ssh-auth-sock-...
+ssh -T git@github.com       # should greet you by username
+git push                    # works over SSH
+```
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `$SSH_AUTH_SOCK` is empty | Run `ssh-add -l` on the host; if "no identities", run `ssh-add --apple-use-keychain ~/.ssh/id_ed25519` and rebuild the container |
+| `Permission denied (publickey)` | Host key not loaded in agent — `ssh-add -l` on host |
+| `fatal: detected dubious ownership` | Already handled by bootstrap (`safe.directory`); rebuild the container if you hit it on an old project |
+
+> ⚠️ The forwarded agent is reachable by **any process inside the container**,
+> including AI agents. It cannot export your private key, but it can sign
+> authentication challenges while the container is running. Treat it as a
+> live credential and don't run untrusted code in the same sandbox as
+> sensitive SSH access.
+
 ## Requirements
 
 - macOS or Linux (devcontainers run Linux containers)

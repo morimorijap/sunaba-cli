@@ -15,6 +15,16 @@ done
 grep -q 'HOME/.local/bin' ~/.profile 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.profile
 export PATH="$HOME/.local/bin:$PATH"
 
+# --- Git / SSH ---
+# VS Code Dev Containers forwards the host ssh-agent socket into the container
+# via SSH_AUTH_SOCK, so `git push` over SSH works as long as the host has run
+# `ssh-add`. We just need the ssh client binary and a safe-directory marker.
+if ! command -v ssh >/dev/null 2>&1; then
+  echo "Installing openssh-client..."
+  sudo apt-get update -qq && sudo apt-get install -y -qq openssh-client
+fi
+git config --global --add safe.directory "$PWD" 2>/dev/null || true
+
 # --- AI Agents (common) ---
 # NOTE: Intentionally using @latest for agent CLIs. This is a deliberate
 # supply-chain tradeoff: we want users to always get the newest agent
