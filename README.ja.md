@@ -119,6 +119,57 @@ code .
 
 脆弱性の報告は [SECURITY.md](SECURITY.md) を参照してください。
 
+## コンテナ内から GitHub に SSH 接続する
+
+`sunaba-cli` はホストの SSH 鍵をコンテナにコピーしません。代わりに
+VS Code Dev Containers 標準の **SSH agent forwarding** を使います。
+ホストの `ssh-agent` のソケットがコンテナ内に `$SSH_AUTH_SOCK` として
+bind mount され、秘密鍵自体はホストから出ないまま `git push` が通ります。
+
+### ホスト側の初回設定 (macOS)
+
+```bash
+# キーチェーンに鍵を登録 (再起動後も自動ロード)
+ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+
+# ~/.ssh/config にキーチェーン利用を追記
+cat >> ~/.ssh/config <<'EOF'
+Host *
+  UseKeychain yes
+  AddKeysToAgent yes
+  IdentityFile ~/.ssh/id_ed25519
+EOF
+
+# 確認
+ssh-add -l   # 鍵が表示されればOK
+```
+
+Linux の場合は `.bashrc` 等に `eval "$(ssh-agent -s)" && ssh-add ~/.ssh/id_ed25519`
+を書いておけば十分です。
+
+### コンテナ内での動作確認
+
+プロジェクトをコンテナで開き直した後:
+
+```bash
+echo "$SSH_AUTH_SOCK"     # パスが表示されるはず
+ssh -T git@github.com      # ユーザー名で挨拶されればOK
+git push                   # SSH 経由で push できる
+```
+
+### トラブルシューティング
+
+| 症状 | 対処 |
+|---|---|
+| `$SSH_AUTH_SOCK` が空 | ホストで `ssh-add -l` → no identities なら `ssh-add --apple-use-keychain ~/.ssh/id_ed25519` を実行してコンテナ再起動 |
+| `Permission denied (publickey)` | ホストの agent に鍵が無い (`ssh-add -l` で確認) |
+| `fatal: detected dubious ownership` | bootstrap で対処済み。古いプロジェクトで出る場合は再 rebuild |
+
+> ⚠️ forwarding された agent はコンテナ内の **すべてのプロセス** (AI エージェント
+> を含む) からアクセス可能です。秘密鍵そのものは取り出せませんが、コンテナが
+> 起動している間は認証署名が可能です。機微な鍵を扱う sandbox で信頼できない
+> コードを同時に動かすのは避けてください。
+
 ## 必要な環境
 
 - macOS / Linux (devcontainer は Linux コンテナで動作)
