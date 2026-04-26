@@ -60,6 +60,24 @@ code .
 初回のコンテナ起動はベースイメージとエージェント CLI のインストールに数分かかります。
 2 回目以降はキャッシュで高速です。
 
+### ホスト直接実行モード (`--no-devcontainer`)
+
+コンテナを使わずホスト上で直接エージェントを動かしたい場合は `--no-devcontainer`
+を指定します:
+
+```bash
+sunaba new local --stack python --no-devcontainer
+```
+
+`.devcontainer/devcontainer.json` と `bootstrap.sh` の生成をスキップし、ホストでも
+そのまま使えるファイル群 (`.mcp.json`、`.vscode/settings.json`、エージェント指示
+ファイル `CLAUDE.md` / `GEMINI.md` / `AGENTS.md` / `skills.md`、`devcontainers` /
+`docker` を除いた `dependabot.yml`、`.gitignore`) のみを出力します。
+
+devcontainer feature 経由でしか自動インストールされないツール (`aws-cli`、
+`gcloud`、`python` ツールチェーン等) は警告として一覧表示されます。必要なら
+ホスト側で手動インストールしてください。
+
 ## コマンド一覧
 
 | コマンド | 用途 |

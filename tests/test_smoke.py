@@ -7,7 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from sunaba_cli.cli import _safe_target, _build_config_files
+from sunaba_cli.cli import (
+    _build_config_files,
+    _build_dependabot_simple,
+    _safe_target,
+    _stack_features_for_warning,
+)
 from sunaba_cli.compose import available_stacks, compose, deep_merge
 
 
@@ -71,3 +76,44 @@ def test_safe_target_rejects_symlink(tmp_path):
 def test_safe_target_allows_normal_relative(tmp_path):
     target = _safe_target(tmp_path, ".devcontainer/devcontainer.json")
     assert target == tmp_path / ".devcontainer" / "devcontainer.json"
+
+
+def test_no_devcontainer_skips_devcontainer_files():
+    files = _build_config_files("hostproj", ["python"], no_devcontainer=True)
+    assert ".devcontainer/devcontainer.json" not in files
+    assert ".devcontainer/bootstrap.sh" not in files
+
+
+def test_no_devcontainer_keeps_host_agnostic_files():
+    files = _build_config_files("hostproj", ["python"], no_devcontainer=True)
+    assert ".mcp.json" in files
+    assert ".github/dependabot.yml" in files
+    # python stack contributes vscode settings via base file-watcher excludes
+    assert ".vscode/settings.json" in files
+
+
+def test_no_devcontainer_dependabot_drops_devcontainer_ecosystems():
+    text = _build_dependabot_simple(["python"], no_devcontainer=True)
+    assert "devcontainers" not in text
+    assert 'package-ecosystem: "docker"' not in text
+    assert "github-actions" in text
+    # Stack-specific extras should still flow in
+    assert 'package-ecosystem: "uv"' in text
+
+
+def test_default_dependabot_keeps_devcontainer_ecosystems():
+    text = _build_dependabot_simple(["python"])
+    assert "devcontainers" in text
+    assert "docker" in text
+
+
+def test_stack_features_for_warning_lists_feature_tools():
+    result = dict(_stack_features_for_warning(["aws", "python", "agents"]))
+    # aws has a devcontainer feature
+    assert "aws" in result
+    assert "aws-cli" in result["aws"]
+    # python has the python feature
+    assert "python" in result
+    assert "python" in result["python"]
+    # agents stack has no features → omitted
+    assert "agents" not in result
