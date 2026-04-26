@@ -10,8 +10,8 @@ import pytest
 from sunaba_cli.cli import (
     _build_config_files,
     _build_dependabot_simple,
+    _missing_host_commands,
     _safe_target,
-    _stack_features_for_warning,
 )
 from sunaba_cli.compose import available_stacks, compose, deep_merge
 
@@ -107,13 +107,27 @@ def test_default_dependabot_keeps_devcontainer_ecosystems():
     assert "docker" in text
 
 
-def test_stack_features_for_warning_lists_feature_tools():
-    result = dict(_stack_features_for_warning(["aws", "python", "agents"]))
-    # aws has a devcontainer feature
-    assert "aws" in result
-    assert "aws-cli" in result["aws"]
-    # python has the python feature
-    assert "python" in result
-    assert "python" in result["python"]
-    # agents stack has no features → omitted
-    assert "agents" not in result
+def test_missing_host_commands_reports_only_missing():
+    # Stub `which` so only `claude` and `aws` are present; everything else missing.
+    present = {"claude", "aws"}
+    missing = _missing_host_commands(
+        ["aws", "python", "agents"], which=lambda cmd: cmd if cmd in present else None
+    )
+    cmds = [c for c, _ in missing]
+    # Present ones are filtered out
+    assert "claude" not in cmds
+    assert "aws" not in cmds
+    # Missing base agent CLIs and MCP runtime show up
+    assert "codex" in cmds
+    assert "gemini" in cmds
+    assert "npx" in cmds
+    assert "uvx" in cmds
+    # Missing stack-specific tool shows up (uv for python)
+    assert "uv" in cmds
+    # `agents` stack has no host requirement of its own
+    assert all(c != "az" for c in cmds)
+
+
+def test_missing_host_commands_empty_when_all_present():
+    missing = _missing_host_commands(["python"], which=lambda cmd: f"/usr/bin/{cmd}")
+    assert missing == []

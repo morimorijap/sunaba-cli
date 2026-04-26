@@ -77,9 +77,10 @@ instruction files (`CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `skills.md`), a
 filtered `dependabot.yml` (no `devcontainers` / `docker` ecosystems), and
 `.gitignore`.
 
-You'll see a warning listing devcontainer-feature tools that won't be
-auto-installed (e.g. `aws-cli`, `gcloud`, `python` toolchain). Install
-those on the host yourself if you need them.
+After creation, `sunaba` checks your `PATH` and warns about any required
+host commands that are missing — agent CLIs (`claude`, `codex`, `gemini`),
+the MCP runtime (`npx`, `uvx`), and stack-specific tools (e.g. `uv`, `aws`,
+`gcloud`, `az`, `neonctl`, `vercel`). Install whatever is reported missing.
 
 ## Commands
 

@@ -74,9 +74,10 @@ sunaba new local --stack python --no-devcontainer
 ファイル `CLAUDE.md` / `GEMINI.md` / `AGENTS.md` / `skills.md`、`devcontainers` /
 `docker` を除いた `dependabot.yml`、`.gitignore`) のみを出力します。
 
-devcontainer feature 経由でしか自動インストールされないツール (`aws-cli`、
-`gcloud`、`python` ツールチェーン等) は警告として一覧表示されます。必要なら
-ホスト側で手動インストールしてください。
+作成後、`sunaba` は `PATH` を確認し、不足しているコマンド (エージェント CLI
+`claude` / `codex` / `gemini`、MCP ランタイム `npx` / `uvx`、stack 依存ツール
+`uv` / `aws` / `gcloud` / `az` / `neonctl` / `vercel` 等) を警告として
+表示します。表示されたものをホスト側で手動インストールしてください。
 
 ## コマンド一覧
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -190,23 +191,40 @@ def _build_config_files(
     return files
 
 
-def _stack_features_for_warning(stacks: list[str]) -> list[tuple[str, list[str]]]:
-    """For each stack, return (stack, [feature short-names]) for devcontainer
-    features that won't auto-install in --no-devcontainer mode. Stacks with no
-    features are omitted.
+# Stack-specific host commands needed when running without a devcontainer.
+# Maps stack name -> (command, human description).
+_STACK_HOST_REQUIREMENTS: dict[str, tuple[str, str]] = {
+    "python": ("uv", "Python package manager (--stack python)"),
+    "aws": ("aws", "AWS CLI (--stack aws)"),
+    "azure": ("az", "Azure CLI (--stack azure)"),
+    "gcp": ("gcloud", "Google Cloud CLI (--stack gcp)"),
+    "neon": ("neonctl", "Neon Postgres CLI (--stack neon)"),
+    "nextjs": ("vercel", "Vercel CLI (--stack nextjs)"),
+}
+
+# Always-required commands when running --no-devcontainer (agent CLIs + MCP runtime).
+_BASE_HOST_REQUIREMENTS: list[tuple[str, str]] = [
+    ("claude", "Claude Code CLI"),
+    ("codex", "OpenAI Codex CLI"),
+    ("gemini", "Google Gemini CLI"),
+    ("npx", "Node.js / npx (MCP: gemini-cli, playwright, chrome-devtools)"),
+    ("uvx", "uv / uvx (MCP: notebooklm-mcp-cli)"),
+]
+
+
+def _missing_host_commands(
+    stacks: list[str], which: callable = shutil.which
+) -> list[tuple[str, str]]:
+    """Return [(command, reason)] for host commands that are not on PATH.
+
+    Used by --no-devcontainer mode to warn the user about anything they need
+    to install themselves. `which` is injectable for tests.
     """
-    out: list[tuple[str, list[str]]] = []
-    for name in stacks:
-        stack_path = TEMPLATES_DIR / "stacks" / f"{name}.json"
-        if not stack_path.exists():
-            continue
-        data = json.loads(stack_path.read_text())
-        features = data.get("features") or {}
-        if not features:
-            continue
-        tools = [fid.split("/")[-1].split(":")[0] for fid in features]
-        out.append((name, tools))
-    return out
+    requirements: list[tuple[str, str]] = list(_BASE_HOST_REQUIREMENTS)
+    for s in stacks:
+        if s in _STACK_HOST_REQUIREMENTS:
+            requirements.append(_STACK_HOST_REQUIREMENTS[s])
+    return [(cmd, reason) for cmd, reason in requirements if which(cmd) is None]
 
 
 def _safe_target(project_dir: Path, relpath: str) -> Path:
@@ -356,14 +374,14 @@ def new(
     )
 
     if no_devcontainer:
-        manual = _stack_features_for_warning(stacks)
-        if manual:
+        missing = _missing_host_commands(stacks)
+        if missing:
             click.echo(
-                "\nWarning: --no-devcontainer skips devcontainer features. "
-                "Install these tools on the host yourself if you need them:"
+                "\nWarning: the following host commands are not on PATH. "
+                "Install them on the host before running the agents:"
             )
-            for stack_name, tools in manual:
-                click.echo(f"  - {stack_name}: {', '.join(tools)}")
+            for cmd, reason in missing:
+                click.echo(f"  - {cmd}  ({reason})")
         click.echo("\nNext steps:")
         click.echo(f"  cd {project_dir}")
         click.echo("  # Run agents directly on the host (claude / codex / gemini).")
