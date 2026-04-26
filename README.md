@@ -62,6 +62,26 @@ code .
 The first container start takes a few minutes while base images and agent
 CLIs install. Subsequent starts are fast (cached).
 
+### Host-only mode (`--no-devcontainer`)
+
+If you'd rather run the agents directly on your host machine instead of
+inside a container, pass `--no-devcontainer`:
+
+```bash
+sunaba new local --stack python --no-devcontainer
+```
+
+This skips `.devcontainer/devcontainer.json` and `bootstrap.sh` and emits
+only the host-portable pieces: `.mcp.json`, `.vscode/settings.json`, agent
+instruction files (`CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `skills.md`), a
+filtered `dependabot.yml` (no `devcontainers` / `docker` ecosystems), and
+`.gitignore`.
+
+After creation, `sunaba` checks your `PATH` and warns about any required
+host commands that are missing — agent CLIs (`claude`, `codex`, `gemini`),
+the MCP runtime (`npx`, `uvx`), and stack-specific tools (e.g. `uv`, `aws`,
+`gcloud`, `az`, `neonctl`, `vercel`). Install whatever is reported missing.
+
 ## Commands
 
 | Command | Description |
@@ -108,6 +128,9 @@ sunaba new infra --stack python --stack aws --stack gcp --stack azure
 # Everything
 sunaba new playground --stack python --stack nextjs --stack aws \
   --stack gcp --stack azure --stack neon --stack agents --stack docker
+
+# Host-only (no devcontainer) — just MCP + agent files on the host
+sunaba new local --stack python --no-devcontainer
 ```
 
 ## Rebuild: change stacks after the fact

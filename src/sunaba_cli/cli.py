@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -34,12 +35,27 @@ def _build_bootstrap(stacks: list[str]) -> str:
     return base
 
 
-def _build_dependabot_simple(stacks: list[str]) -> str:
-    """Build dependabot.yml without PyYAML dependency."""
-    base_text = (TEMPLATES_DIR / "base" / "dependabot.yml").read_text()
+def _build_dependabot_simple(stacks: list[str], *, no_devcontainer: bool = False) -> str:
+    """Build dependabot.yml without PyYAML dependency.
+
+    When no_devcontainer is True, the `devcontainers` and `docker` ecosystems
+    (which exist only because of the generated devcontainer config) are dropped.
+    """
+    if no_devcontainer:
+        base_text = (
+            "version: 2\n"
+            "updates:\n"
+            '  - package-ecosystem: "github-actions"\n'
+            '    directory: "/"\n'
+            "    schedule:\n"
+            '      interval: "weekly"\n'
+        )
+        existing = {"github-actions"}
+    else:
+        base_text = (TEMPLATES_DIR / "base" / "dependabot.yml").read_text()
+        existing = {"devcontainers", "docker", "github-actions"}
 
     extra_sections: list[str] = []
-    existing = {"devcontainers", "docker", "github-actions"}
 
     for name in stacks:
         stack_path = TEMPLATES_DIR / "stacks" / f"{name}.json"
@@ -123,8 +139,15 @@ def _interactive_select_stacks() -> list[str]:
         return unique
 
 
-def _build_config_files(name: str, stacks: list[str]) -> dict[str, str]:
-    """Compose all config file contents for a project. Returns {relpath: content}."""
+def _build_config_files(
+    name: str, stacks: list[str], *, no_devcontainer: bool = False
+) -> dict[str, str]:
+    """Compose all config file contents for a project. Returns {relpath: content}.
+
+    When no_devcontainer is True, `.devcontainer/*` are skipped and
+    `dependabot.yml` is filtered to drop devcontainer/docker ecosystems.
+    Host-agnostic files (`.mcp.json`, `.vscode/settings.json`) are still emitted.
+    """
     config = compose(stacks)
     config["name"] = f"sunaba-{name}"
 
@@ -142,11 +165,15 @@ def _build_config_files(name: str, stacks: list[str]) -> dict[str, str]:
     clean_config = _clean_devcontainer(config)
     files: dict[str, str] = {}
 
-    files[".devcontainer/devcontainer.json"] = (
-        json.dumps(clean_config, indent=2, ensure_ascii=False) + "\n"
+    if not no_devcontainer:
+        files[".devcontainer/devcontainer.json"] = (
+            json.dumps(clean_config, indent=2, ensure_ascii=False) + "\n"
+        )
+        files[".devcontainer/bootstrap.sh"] = _build_bootstrap(stacks)
+
+    files[".github/dependabot.yml"] = _build_dependabot_simple(
+        stacks, no_devcontainer=no_devcontainer
     )
-    files[".devcontainer/bootstrap.sh"] = _build_bootstrap(stacks)
-    files[".github/dependabot.yml"] = _build_dependabot_simple(stacks)
 
     # .mcp.json for Claude Code -> codex/gemini-cli via MCP
     mcp_template = TEMPLATES_DIR / "base" / "mcp.json"
@@ -162,6 +189,42 @@ def _build_config_files(name: str, stacks: list[str]) -> dict[str, str]:
         )
 
     return files
+
+
+# Stack-specific host commands needed when running without a devcontainer.
+# Maps stack name -> (command, human description).
+_STACK_HOST_REQUIREMENTS: dict[str, tuple[str, str]] = {
+    "python": ("uv", "Python package manager (--stack python)"),
+    "aws": ("aws", "AWS CLI (--stack aws)"),
+    "azure": ("az", "Azure CLI (--stack azure)"),
+    "gcp": ("gcloud", "Google Cloud CLI (--stack gcp)"),
+    "neon": ("neonctl", "Neon Postgres CLI (--stack neon)"),
+    "nextjs": ("vercel", "Vercel CLI (--stack nextjs)"),
+}
+
+# Always-required commands when running --no-devcontainer (agent CLIs + MCP runtime).
+_BASE_HOST_REQUIREMENTS: list[tuple[str, str]] = [
+    ("claude", "Claude Code CLI"),
+    ("codex", "OpenAI Codex CLI"),
+    ("gemini", "Google Gemini CLI"),
+    ("npx", "Node.js / npx (MCP: gemini-cli, playwright, chrome-devtools)"),
+    ("uvx", "uv / uvx (MCP: notebooklm-mcp-cli)"),
+]
+
+
+def _missing_host_commands(
+    stacks: list[str], which: callable = shutil.which
+) -> list[tuple[str, str]]:
+    """Return [(command, reason)] for host commands that are not on PATH.
+
+    Used by --no-devcontainer mode to warn the user about anything they need
+    to install themselves. `which` is injectable for tests.
+    """
+    requirements: list[tuple[str, str]] = list(_BASE_HOST_REQUIREMENTS)
+    for s in stacks:
+        if s in _STACK_HOST_REQUIREMENTS:
+            requirements.append(_STACK_HOST_REQUIREMENTS[s])
+    return [(cmd, reason) for cmd, reason in requirements if which(cmd) is None]
 
 
 def _safe_target(project_dir: Path, relpath: str) -> Path:
@@ -238,7 +301,20 @@ def main():
 @click.option("--path", "-p", type=click.Path(), default=None, help="Parent directory.")
 @click.option("--no-agents", is_flag=True, default=False, help="Skip agent files.")
 @click.option("--no-prompt", is_flag=True, default=False, help="Disable interactive stack prompt (default to python).")
-def new(name: str, stack: tuple[str, ...], path: str | None, no_agents: bool, no_prompt: bool):
+@click.option(
+    "--no-devcontainer",
+    is_flag=True,
+    default=False,
+    help="Skip devcontainer files. Generates host-only setup (agent files, .mcp.json, .vscode, dependabot).",
+)
+def new(
+    name: str,
+    stack: tuple[str, ...],
+    path: str | None,
+    no_agents: bool,
+    no_prompt: bool,
+    no_devcontainer: bool,
+):
     """Create a new sandbox project with devcontainer configuration.
 
     Examples:
@@ -246,6 +322,7 @@ def new(name: str, stack: tuple[str, ...], path: str | None, no_agents: bool, no
         sunaba new myapp --stack python             # explicit
         sunaba new webapp --stack nextjs --stack aws
         sunaba new headless --no-prompt             # script-safe, defaults to python
+        sunaba new local --stack python --no-devcontainer   # host-only, skip devcontainer
     """
     if stack:
         stacks = list(stack)
@@ -273,7 +350,7 @@ def new(name: str, stack: tuple[str, ...], path: str | None, no_agents: bool, no
 
     project_dir.mkdir(parents=True)
 
-    files = _build_config_files(name, stacks)
+    files = _build_config_files(name, stacks, no_devcontainer=no_devcontainer)
     written = _write_files(project_dir, files)
     for relpath in written:
         click.echo(f"  Created {relpath}")
@@ -290,11 +367,29 @@ def new(name: str, stack: tuple[str, ...], path: str | None, no_agents: bool, no
 
     register_project(name, project_dir, stacks)
 
-    click.echo(f"\nSunaba '{name}' created at {project_dir} (stacks: {', '.join(stacks)})")
-    click.echo("\nNext steps:")
-    click.echo(f"  cd {project_dir}")
-    click.echo("  code .")
-    click.echo("  # VS Code: Cmd+Shift+P -> 'Dev Containers: Reopen in Container'")
+    mode_label = "host-only" if no_devcontainer else "devcontainer"
+    click.echo(
+        f"\nSunaba '{name}' created at {project_dir} "
+        f"(stacks: {', '.join(stacks)}, mode: {mode_label})"
+    )
+
+    if no_devcontainer:
+        missing = _missing_host_commands(stacks)
+        if missing:
+            click.echo(
+                "\nWarning: the following host commands are not on PATH. "
+                "Install them on the host before running the agents:"
+            )
+            for cmd, reason in missing:
+                click.echo(f"  - {cmd}  ({reason})")
+        click.echo("\nNext steps:")
+        click.echo(f"  cd {project_dir}")
+        click.echo("  # Run agents directly on the host (claude / codex / gemini).")
+    else:
+        click.echo("\nNext steps:")
+        click.echo(f"  cd {project_dir}")
+        click.echo("  code .")
+        click.echo("  # VS Code: Cmd+Shift+P -> 'Dev Containers: Reopen in Container'")
 
 
 def _resolve_target(name_or_path: str) -> tuple[str, Path, list[str]]:
