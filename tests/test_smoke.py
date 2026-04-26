@@ -7,11 +7,15 @@ from pathlib import Path
 
 import pytest
 
+from click.testing import CliRunner
+
+from sunaba_cli import cli as cli_module
 from sunaba_cli.cli import (
     _build_config_files,
     _build_dependabot_simple,
     _missing_host_commands,
     _safe_target,
+    main,
 )
 from sunaba_cli.compose import available_stacks, compose, deep_merge
 
@@ -131,3 +135,62 @@ def test_missing_host_commands_reports_only_missing():
 def test_missing_host_commands_empty_when_all_present():
     missing = _missing_host_commands(["python"], which=lambda cmd: f"/usr/bin/{cmd}")
     assert missing == []
+
+
+def test_upgrade_invokes_uv_binary_with_reinstall(monkeypatch):
+    """Regression: `sunaba upgrade` must call the `uv` binary on PATH (not
+    `python -m uv`) and use `tool install --reinstall <git-url>` form, since
+    `uv tool upgrade` does not accept git URLs.
+    """
+
+    class _Result:
+        returncode = 0
+        stdout = "Installed sunaba-cli"
+        stderr = ""
+
+    captured: dict = {}
+
+    def fake_run(cmd, capture_output, text):
+        captured["cmd"] = cmd
+        return _Result()
+
+    monkeypatch.setattr(cli_module.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(cli_module.subprocess, "run", fake_run)
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["upgrade"])
+    assert result.exit_code == 0, result.output
+
+    cmd = captured["cmd"]
+    assert cmd[0] == "/usr/bin/uv"
+    assert cmd[1:4] == ["tool", "install", "--reinstall"]
+    assert cmd[-1].startswith("git+https://github.com/morimorijap/sunaba-cli")
+
+
+def test_upgrade_errors_when_uv_missing(monkeypatch):
+    monkeypatch.setattr(cli_module.shutil, "which", lambda name: None)
+    runner = CliRunner()
+    result = runner.invoke(main, ["upgrade"])
+    assert result.exit_code != 0
+    assert "uv" in result.output
+
+
+def test_upgrade_repo_override_normalizes_to_git_prefix(monkeypatch):
+    captured: dict = {}
+
+    class _Result:
+        returncode = 0
+        stdout = "ok"
+        stderr = ""
+
+    monkeypatch.setattr(cli_module.shutil, "which", lambda name: "/usr/bin/uv")
+    monkeypatch.setattr(
+        cli_module.subprocess,
+        "run",
+        lambda cmd, **kw: (captured.setdefault("cmd", cmd), _Result())[1],
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["upgrade", "--repo", "https://example.com/x"])
+    assert result.exit_code == 0, result.output
+    assert captured["cmd"][-1] == "git+https://example.com/x"

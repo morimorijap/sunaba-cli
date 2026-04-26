@@ -593,30 +593,34 @@ def upgrade(repo: str | None):
     if repo is None:
         repo = DEFAULT_UPGRADE_REPO
     else:
-        repo = f"git+{repo}" if not repo.startswith(("git+", "http")) else repo
         if repo.startswith("http"):
             repo = f"git+{repo}"
+        elif not repo.startswith("git+"):
+            repo = f"git+{repo}"
 
+    uv_bin = shutil.which("uv")
+    if uv_bin is None:
+        click.echo(
+            "Error: 'uv' is not on PATH. Install it from https://docs.astral.sh/uv/ "
+            "and try again.",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    # `uv tool upgrade` only accepts package names, not git URLs. For a
+    # tool installed from a git URL, the canonical "pull latest" form is
+    # `uv tool install --reinstall <git-url>`.
     click.echo("Upgrading sunaba-cli...")
     result = subprocess.run(
-        [sys.executable, "-m", "uv", "tool", "upgrade", repo],
+        [uv_bin, "tool", "install", "--reinstall", repo],
         capture_output=True,
         text=True,
     )
     if result.returncode == 0:
-        click.echo(result.stdout.strip() or "sunaba-cli is up to date.")
+        click.echo(result.stdout.strip() or result.stderr.strip() or "Upgraded successfully.")
     else:
-        click.echo("Trying reinstall...")
-        result = subprocess.run(
-            [sys.executable, "-m", "uv", "tool", "install", "--upgrade", repo],
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode == 0:
-            click.echo(result.stdout.strip() or "Upgraded successfully.")
-        else:
-            click.echo(f"Error: {result.stderr.strip()}", err=True)
-            raise SystemExit(1)
+        click.echo(f"Error: {result.stderr.strip() or result.stdout.strip()}", err=True)
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
