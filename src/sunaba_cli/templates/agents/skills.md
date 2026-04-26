@@ -7,7 +7,7 @@
 - **docker**: Container management (via docker-outside-of-docker)
 - **claude**: Claude Code AI assistant
 - **codex**: OpenAI Codex agent
-- **gemini**: Google Gemini CLI agent
+- **gemini**: Google Gemini CLI agent (MCP: pass `model: "gemini-3.1-pro-preview"` for the preview Pro model)
 
 ## Common Workflows
 - `uv run pytest` - Run Python tests
