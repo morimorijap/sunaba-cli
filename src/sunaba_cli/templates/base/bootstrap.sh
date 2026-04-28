@@ -25,6 +25,13 @@ if ! command -v ssh >/dev/null 2>&1; then
 fi
 git config --global --add safe.directory "$PWD" 2>/dev/null || true
 
+# bubblewrap: required by Codex CLI sandboxing. Without it Codex falls back to
+# a vendored copy and warns on every start.
+if ! command -v bwrap >/dev/null 2>&1; then
+  echo "Installing bubblewrap..."
+  sudo apt-get update -qq && sudo apt-get install -y -qq bubblewrap
+fi
+
 # --- AI Agents (common) ---
 # NOTE: Intentionally using @latest for agent CLIs. This is a deliberate
 # supply-chain tradeoff: we want users to always get the newest agent
