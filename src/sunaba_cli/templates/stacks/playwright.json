@@ -16,6 +16,10 @@
     "echo 'Installing Playwright Chromium and system dependencies...'",
     "if [ -d \"$HOME/.cache/ms-playwright\" ] && [ \"$(stat -c '%u' \"$HOME/.cache/ms-playwright\")\" != \"$(id -u)\" ]; then sudo chown -R \"$(id -u):$(id -g)\" \"$HOME/.cache/ms-playwright\"; fi",
     "if [ -f package-lock.json ]; then npm ci --ignore-scripts; fi",
-    "if [ -x ./node_modules/.bin/playwright ]; then ./node_modules/.bin/playwright install --with-deps chromium; else npx -y playwright@latest install --with-deps chromium; fi"
+    "# Always install Chromium for the @playwright/mcp@latest version that .mcp.json launches.",
+    "# Also installs system deps (apt). Idempotent on re-run.",
+    "npx -y playwright@latest install --with-deps chromium",
+    "# If the project pins its own Playwright version, install its matching Chromium too (browser only — deps are already there).",
+    "if [ -x ./node_modules/.bin/playwright ]; then ./node_modules/.bin/playwright install chromium; fi"
   ]
 }
