@@ -6,6 +6,7 @@
   },
   "_bootstrap": [
     "# --- neon ---",
-    "if ! command -v neonctl >/dev/null 2>&1; then npm install -g neonctl@latest; fi"
+    "if ! command -v neonctl >/dev/null 2>&1; then npm install -g neonctl@latest; fi",
+    "if ! command -v psql >/dev/null 2>&1; then echo 'Installing postgresql-client...'; sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client; fi"
   ]
 }
