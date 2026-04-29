@@ -1,6 +1,6 @@
 [project]
 name = "sunaba-cli"
-version = "0.1.0"
+version = "0.2.0"
 description = "One-command devcontainer sandbox for AI agent development (Claude Code / Codex / Gemini CLI)"
 requires-python = ">=3.11"
 dependencies = [

@@ -106,6 +106,7 @@ the MCP runtime (`npx`, `uvx`), and stack-specific tools (e.g. `uv`, `aws`,
 | `neon` | `neonctl` (Neon Postgres CLI) + PostgreSQL server (`postgresql` apt package, includes `psql`) + `NEON_API_KEY` |
 | `agents` | Injects `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` from host |
 | `docker` | `docker-outside-of-docker` (access host Docker daemon) |
+| `playwright` | Chromium + Linux deps for Playwright / Chrome DevTools MCP (E2E browser automation) |
 
 List them at runtime:
 
