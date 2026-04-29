@@ -103,6 +103,7 @@ sunaba new local --stack python --no-devcontainer
 | `neon` | `neonctl` (Neon Postgres CLI) + `NEON_API_KEY` |
 | `agents` | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` をホストから注入 |
 | `docker` | `docker-outside-of-docker` (ホストの Docker daemon にアクセス) |
+| `playwright` | Chromium + Linux 依存ライブラリ (Playwright / Chrome DevTools MCP の E2E 用) |
 
 ## セキュリティについて (必読)
 

@@ -58,6 +58,21 @@ def test_build_config_files_clean():
     assert dc["name"] == "sunaba-testproj"
 
 
+def test_compose_playwright_adds_browser_cache_mount():
+    config = compose(["playwright"])
+    mounts = config.get("mounts", [])
+    assert any("ms-playwright" in m for m in mounts), mounts
+    # Base npm-cache mount must be preserved alongside the playwright cache.
+    assert any("npm-cache" in m for m in mounts), mounts
+
+
+def test_compose_playwright_bootstrap_installs_chromium_with_deps():
+    files = _build_config_files("e2eproj", ["playwright"])
+    bootstrap = files[".devcontainer/bootstrap.sh"]
+    assert "playwright" in bootstrap
+    assert "--with-deps chromium" in bootstrap
+
+
 def test_safe_target_rejects_traversal(tmp_path):
     with pytest.raises(ValueError):
         _safe_target(tmp_path, "../escape.txt")

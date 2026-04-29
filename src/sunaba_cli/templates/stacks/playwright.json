@@ -1,0 +1,21 @@
+{
+  "_description": "Playwright/Chromium: browser binaries and Linux deps for E2E + Playwright/Chrome DevTools MCP",
+  "features": {},
+  "mounts": [
+    "source=playwright-cache,target=/home/vscode/.cache/ms-playwright,type=volume"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-playwright.playwright"
+      ]
+    }
+  },
+  "_bootstrap": [
+    "# --- playwright/chromium ---",
+    "echo 'Installing Playwright Chromium and system dependencies...'",
+    "if [ -d \"$HOME/.cache/ms-playwright\" ] && [ \"$(stat -c '%u' \"$HOME/.cache/ms-playwright\")\" != \"$(id -u)\" ]; then sudo chown -R \"$(id -u):$(id -g)\" \"$HOME/.cache/ms-playwright\"; fi",
+    "if [ -f package-lock.json ]; then npm ci --ignore-scripts; fi",
+    "if [ -x ./node_modules/.bin/playwright ]; then ./node_modules/.bin/playwright install --with-deps chromium; else npx -y playwright@latest install --with-deps chromium; fi"
+  ]
+}
