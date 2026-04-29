@@ -1,15 +1,27 @@
 {
   "_description": "AWS CLI + credentials (AWS_ACCESS_KEY_ID etc.)",
-  "features": {
-    "ghcr.io/devcontainers/features/aws-cli:1": {}
-  },
   "remoteEnv": {
     "AWS_ACCESS_KEY_ID": "${localEnv:AWS_ACCESS_KEY_ID}",
     "AWS_SECRET_ACCESS_KEY": "${localEnv:AWS_SECRET_ACCESS_KEY}",
-    "AWS_DEFAULT_REGION": "${localEnv:AWS_DEFAULT_REGION}"
+    "AWS_DEFAULT_REGION": "${localEnv:AWS_DEFAULT_REGION:ap-northeast-1}",
+    "AWS_REGION": "${localEnv:AWS_REGION:ap-northeast-1}"
   },
   "_bootstrap": [
     "# --- aws ---",
+    "if ! command -v aws >/dev/null 2>&1; then",
+    "  case \"$(uname -m)\" in",
+    "    aarch64|arm64) AWS_PKG=\"awscli-exe-linux-aarch64.zip\" ;;",
+    "    x86_64|amd64)  AWS_PKG=\"awscli-exe-linux-x86_64.zip\" ;;",
+    "    *) echo \"Unsupported arch: $(uname -m)\" >&2; exit 1 ;;",
+    "  esac",
+    "  echo \"Installing AWS CLI v2 ($AWS_PKG)...\"",
+    "  curl -sSL \"https://awscli.amazonaws.com/${AWS_PKG}\" -o /tmp/awscliv2.zip",
+    "  unzip -q /tmp/awscliv2.zip -d /tmp",
+    "  sudo /tmp/aws/install --update",
+    "  rm -rf /tmp/aws /tmp/awscliv2.zip",
+    "fi",
+    "# Default AWS region (overrides aws configure default of us-east-1)",
+    "aws configure set region ap-northeast-1 2>/dev/null || true",
     "if ! command -v sam >/dev/null 2>&1; then pip install aws-sam-cli 2>/dev/null || true; fi"
   ]
 }
