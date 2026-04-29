@@ -73,6 +73,19 @@ def test_compose_playwright_bootstrap_installs_chromium_with_deps():
     assert "--with-deps chromium" in bootstrap
 
 
+def test_mcp_json_playwright_pins_bundled_chromium():
+    """Regression: the Playwright MCP server must explicitly pass
+    --browser chromium so it uses Playwright's bundled Chromium instead of
+    looking for a system Google Chrome install (which devcontainers don't
+    have).
+    """
+    files = _build_config_files("p", ["python"])
+    mcp = json.loads(files[".mcp.json"])
+    pw_args = mcp["mcpServers"]["playwright"]["args"]
+    assert "--browser" in pw_args
+    assert pw_args[pw_args.index("--browser") + 1] == "chromium"
+
+
 def test_safe_target_rejects_traversal(tmp_path):
     with pytest.raises(ValueError):
         _safe_target(tmp_path, "../escape.txt")
