@@ -100,7 +100,7 @@ sunaba new local --stack python --no-devcontainer
 | `aws` | `aws-cli` (devcontainer feature) + AWS 認証環境変数 |
 | `azure` | `az` CLI + Azure 認証環境変数 |
 | `gcp` | `gcloud` CLI + GCP 認証環境変数 |
-| `neon` | `neonctl` (Neon Postgres CLI) + `NEON_API_KEY` |
+| `neon` | `neonctl` (Neon Postgres CLI) + PostgreSQL サーバー本体 (`postgresql` apt パッケージ、`psql` 含む) + `NEON_API_KEY` |
 | `agents` | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` をホストから注入 |
 | `docker` | `docker-outside-of-docker` (ホストの Docker daemon にアクセス) |
 

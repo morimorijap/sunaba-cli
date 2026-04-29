@@ -1,11 +1,12 @@
 {
-  "_description": "Neon Postgres CLI (neonctl) + NEON_API_KEY",
+  "_description": "Neon Postgres CLI (neonctl) + PostgreSQL server + NEON_API_KEY",
   "features": {},
   "remoteEnv": {
     "NEON_API_KEY": "${localEnv:NEON_API_KEY}"
   },
   "_bootstrap": [
     "# --- neon ---",
-    "if ! command -v neonctl >/dev/null 2>&1; then npm install -g neonctl@latest; fi"
+    "if ! command -v neonctl >/dev/null 2>&1; then npm install -g neonctl@latest; fi",
+    "if ! dpkg -s postgresql >/dev/null 2>&1; then echo 'Installing postgresql server...'; sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq postgresql; fi"
   ]
 }
