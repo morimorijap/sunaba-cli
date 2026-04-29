@@ -289,7 +289,7 @@ def _diff_files(project_dir: Path, files: dict[str, str]) -> dict[str, str]:
 
 
 @click.group()
-@click.version_option(version="0.2.0")
+@click.version_option(version="0.2.1")
 def main():
     """sunaba-cli: One-command devcontainer sandbox for AI agent development."""
     pass
