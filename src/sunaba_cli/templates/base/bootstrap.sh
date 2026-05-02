@@ -3,13 +3,45 @@ set -euo pipefail
 
 echo "=== Sunaba Bootstrap ==="
 
-# Fix ownership of named-volume cache dirs (root-owned by default on first mount)
-for d in "$HOME/.npm" "$HOME/.cache/uv" "$HOME/.cache"; do
-  if [ -d "$d" ] && [ "$(stat -c '%u' "$d")" != "$(id -u)" ]; then
+uid="$(id -u)"
+gid="$(id -g)"
+
+# Docker named volumes are root-owned on first mount. When a child volume
+# (e.g. ~/.config/gh, ~/.local/share/com.vercel.cli) is mounted, Docker
+# auto-creates the parent directories as root, which breaks `mkdir`/`pip
+# install --user` later. Ensure each parent exists and is owned by the
+# runtime user. mkdir+chown (rather than `install -d -o`) is intentional:
+# `install -d` does not change ownership of an already-existing directory,
+# so it would silently leave a root-created parent root-owned.
+for d in "$HOME/.config" "$HOME/.local" "$HOME/.local/share" \
+         "$HOME/.local/bin" "$HOME/.cache"; do
+  sudo mkdir -p "$d"
+  sudo chown "$uid:$gid" "$d"
+done
+
+# Cache volumes are large; only chown if the top dir is wrong-owned (cheap
+# heuristic — full -R would be slow on warm caches).
+for d in "$HOME/.npm" "$HOME/.cache/uv" "$HOME/.cache/ms-playwright"; do
+  if [ -d "$d" ] && [ "$(stat -c '%u' "$d")" != "$uid" ]; then
     echo "Fixing ownership of $d"
-    sudo chown -R "$(id -u):$(id -g)" "$d"
+    sudo chown -R "$uid:$gid" "$d"
   fi
 done
+
+# Helper for config volumes (auth tokens, session state). These are tiny and
+# historically suffer from "directory user-owned but a child file is
+# root-owned" drift after a `sudo` invocation, which the shallow stat check
+# above would silently skip. Always chown -R; cost is < 10ms. Stacks call
+# this from their own _bootstrap snippets for stack-specific volumes.
+sunaba_fix_config_dir() {
+  if [ -e "$1" ]; then
+    sudo chown -R "$uid:$gid" "$1"
+  fi
+}
+
+# gh-config is mounted in base/devcontainer.json (github-cli is in base
+# features), so chown it here. Other auth volumes are owned by stacks.
+sunaba_fix_config_dir "$HOME/.config/gh"
 
 # Ensure ~/.local/bin is on PATH
 grep -q 'HOME/.local/bin' ~/.profile 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.profile

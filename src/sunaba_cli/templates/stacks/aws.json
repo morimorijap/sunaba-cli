@@ -1,13 +1,18 @@
 {
-  "_description": "AWS CLI + credentials (AWS_ACCESS_KEY_ID etc.)",
+  "_description": "AWS CLI + credentials (AWS_ACCESS_KEY_ID etc.) with persisted ~/.aws (sso/sts cache, profiles)",
   "remoteEnv": {
     "AWS_ACCESS_KEY_ID": "${localEnv:AWS_ACCESS_KEY_ID}",
     "AWS_SECRET_ACCESS_KEY": "${localEnv:AWS_SECRET_ACCESS_KEY}",
     "AWS_DEFAULT_REGION": "${localEnv:AWS_DEFAULT_REGION:ap-northeast-1}",
     "AWS_REGION": "${localEnv:AWS_REGION:ap-northeast-1}"
   },
+  "mounts": [
+    "source=aws-config,target=/home/vscode/.aws,type=volume"
+  ],
   "_bootstrap": [
     "# --- aws ---",
+    "sunaba_fix_config_dir \"$HOME/.aws\"",
+    "chmod 700 \"$HOME/.aws\" 2>/dev/null || true",
     "if ! command -v aws >/dev/null 2>&1; then",
     "  case \"$(uname -m)\" in",
     "    aarch64|arm64) AWS_PKG=\"awscli-exe-linux-aarch64.zip\" ;;",

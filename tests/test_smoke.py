@@ -66,6 +66,98 @@ def test_compose_playwright_adds_browser_cache_mount():
     assert any("npm-cache" in m for m in mounts), mounts
 
 
+def test_base_mounts_gh_config_volume():
+    """gh-config volume is in base because github-cli feature is in base."""
+    config = compose([])
+    mounts = config.get("mounts", [])
+    assert any(
+        "source=gh-config" in m and "/.config/gh" in m for m in mounts
+    ), mounts
+
+
+def test_compose_agents_persists_claude_codex_gemini_volumes():
+    config = compose(["agents"])
+    mounts = config.get("mounts", [])
+    targets = {m for m in mounts}
+    assert any("source=claude-config" in m and "/.claude" in m for m in targets), mounts
+    assert any("source=codex-config" in m and "/.codex" in m for m in targets), mounts
+    assert any("source=gemini-config" in m and "/.gemini" in m for m in targets), mounts
+
+
+def test_compose_aws_persists_aws_config_volume():
+    config = compose(["aws"])
+    mounts = config.get("mounts", [])
+    assert any("source=aws-config" in m and "/.aws" in m for m in mounts), mounts
+
+
+def test_compose_nextjs_persists_vercel_config_volume():
+    config = compose(["nextjs"])
+    mounts = config.get("mounts", [])
+    assert any(
+        "source=vercel-config" in m and "/.local/share/com.vercel.cli" in m
+        for m in mounts
+    ), mounts
+
+
+def test_base_bootstrap_defines_helper_and_pre_creates_parent_dirs():
+    """The chown helper must be defined before any stack snippet calls it,
+    and parent dirs (.local/.config/.local/share) must be pre-created so a
+    later child volume mount or `pip install --user` does not run into a
+    root-owned parent.
+    """
+    files = _build_config_files("p", [])
+    bootstrap = files[".devcontainer/bootstrap.sh"]
+    # Helper defined
+    assert "sunaba_fix_config_dir() {" in bootstrap
+    # Parent dirs pre-created AND owned by user (mkdir+chown, not install -d
+    # which leaves existing root-owned parents alone).
+    assert "sudo mkdir -p" in bootstrap
+    assert 'sudo chown "$uid:$gid"' in bootstrap
+    assert '"$HOME/.config"' in bootstrap
+    assert '"$HOME/.local"' in bootstrap
+    assert '"$HOME/.local/bin"' in bootstrap
+    # gh-config (base mount) is fixed in base
+    assert 'sunaba_fix_config_dir "$HOME/.config/gh"' in bootstrap
+
+
+def test_agents_bootstrap_symlinks_claude_json_into_volume():
+    """~/.claude.json (single-file MCP/trust state) is wiped on rebuild;
+    must be moved into the persistent ~/.claude volume and symlinked back.
+    """
+    files = _build_config_files("p", ["agents"])
+    bootstrap = files[".devcontainer/bootstrap.sh"]
+    assert 'sunaba_fix_config_dir "$HOME/.claude"' in bootstrap
+    assert 'sunaba_fix_config_dir "$HOME/.codex"' in bootstrap
+    assert 'sunaba_fix_config_dir "$HOME/.gemini"' in bootstrap
+    # Symlink-or-move logic for ~/.claude.json
+    assert '$HOME/.claude.json' in bootstrap
+    assert '$HOME/.claude/claude.json' in bootstrap
+    assert "ln -s" in bootstrap
+
+
+def test_aws_bootstrap_calls_helper_for_aws_dir():
+    files = _build_config_files("p", ["aws"])
+    bootstrap = files[".devcontainer/bootstrap.sh"]
+    assert 'sunaba_fix_config_dir "$HOME/.aws"' in bootstrap
+
+
+def test_nextjs_bootstrap_calls_helper_for_vercel_dir():
+    files = _build_config_files("p", ["nextjs"])
+    bootstrap = files[".devcontainer/bootstrap.sh"]
+    assert 'sunaba_fix_config_dir "$HOME/.local/share/com.vercel.cli"' in bootstrap
+
+
+def test_helper_defined_before_stack_snippets():
+    """Composition order matters: the helper must appear before any stack
+    invocation so bash parses it before reaching the call site.
+    """
+    files = _build_config_files("p", ["agents", "aws", "nextjs"])
+    bootstrap = files[".devcontainer/bootstrap.sh"]
+    helper_idx = bootstrap.index("sunaba_fix_config_dir() {")
+    first_call_idx = bootstrap.index('sunaba_fix_config_dir "$HOME/.claude"')
+    assert helper_idx < first_call_idx
+
+
 def test_compose_playwright_bootstrap_installs_chromium_with_deps():
     files = _build_config_files("e2eproj", ["playwright"])
     bootstrap = files[".devcontainer/bootstrap.sh"]
