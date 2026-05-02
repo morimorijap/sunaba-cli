@@ -6,7 +6,8 @@
     "ghcr.io/devcontainers/features/node:1": { "version": "22" }
   },
   "mounts": [
-    "source=npm-cache,target=/home/vscode/.npm,type=volume"
+    "source=npm-cache,target=/home/vscode/.npm,type=volume",
+    "source=gh-config,target=/home/vscode/.config/gh,type=volume"
   ],
   "remoteEnv": {},
   "postCreateCommand": "bash .devcontainer/bootstrap.sh",

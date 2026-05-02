@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -64,6 +66,206 @@ def test_compose_playwright_adds_browser_cache_mount():
     assert any("ms-playwright" in m for m in mounts), mounts
     # Base npm-cache mount must be preserved alongside the playwright cache.
     assert any("npm-cache" in m for m in mounts), mounts
+
+
+def test_base_mounts_gh_config_volume():
+    """gh-config volume is in base because github-cli feature is in base."""
+    config = compose([])
+    mounts = config.get("mounts", [])
+    assert any(
+        "source=gh-config" in m and "/.config/gh" in m for m in mounts
+    ), mounts
+
+
+def test_compose_agents_persists_claude_codex_gemini_volumes():
+    config = compose(["agents"])
+    mounts = config.get("mounts", [])
+    targets = {m for m in mounts}
+    assert any("source=claude-config" in m and "/.claude" in m for m in targets), mounts
+    assert any("source=codex-config" in m and "/.codex" in m for m in targets), mounts
+    assert any("source=gemini-config" in m and "/.gemini" in m for m in targets), mounts
+
+
+def test_compose_aws_persists_aws_config_volume():
+    config = compose(["aws"])
+    mounts = config.get("mounts", [])
+    assert any("source=aws-config" in m and "/.aws" in m for m in mounts), mounts
+
+
+def test_compose_nextjs_persists_vercel_config_volume():
+    config = compose(["nextjs"])
+    mounts = config.get("mounts", [])
+    assert any(
+        "source=vercel-config" in m and "/.local/share/com.vercel.cli" in m
+        for m in mounts
+    ), mounts
+
+
+def test_base_bootstrap_defines_helper_and_pre_creates_parent_dirs():
+    """The chown helper must be defined before any stack snippet calls it,
+    and parent dirs (.local/.config/.local/share) must be pre-created so a
+    later child volume mount or `pip install --user` does not run into a
+    root-owned parent.
+    """
+    files = _build_config_files("p", [])
+    bootstrap = files[".devcontainer/bootstrap.sh"]
+    # Helper defined
+    assert "sunaba_fix_config_dir() {" in bootstrap
+    # Parent dirs pre-created AND owned by user (mkdir+chown, not install -d
+    # which leaves existing root-owned parents alone).
+    assert "sudo mkdir -p" in bootstrap
+    assert 'sudo chown "$uid:$gid"' in bootstrap
+    assert '"$HOME/.config"' in bootstrap
+    assert '"$HOME/.local"' in bootstrap
+    assert '"$HOME/.local/bin"' in bootstrap
+    # gh-config (base mount) is fixed in base
+    assert 'sunaba_fix_config_dir "$HOME/.config/gh"' in bootstrap
+
+
+def test_agents_bootstrap_symlinks_claude_json_into_volume():
+    """~/.claude.json (single-file MCP/trust state) is wiped on rebuild;
+    must be moved into the persistent ~/.claude volume and symlinked back.
+    """
+    files = _build_config_files("p", ["agents"])
+    bootstrap = files[".devcontainer/bootstrap.sh"]
+    assert 'sunaba_fix_config_dir "$HOME/.claude"' in bootstrap
+    assert 'sunaba_fix_config_dir "$HOME/.codex"' in bootstrap
+    assert 'sunaba_fix_config_dir "$HOME/.gemini"' in bootstrap
+    # Symlink-or-move logic for ~/.claude.json
+    assert '$HOME/.claude.json' in bootstrap
+    assert '$HOME/.claude/claude.json' in bootstrap
+    assert "ln -s" in bootstrap
+
+
+def test_aws_bootstrap_calls_helper_for_aws_dir():
+    files = _build_config_files("p", ["aws"])
+    bootstrap = files[".devcontainer/bootstrap.sh"]
+    assert 'sunaba_fix_config_dir "$HOME/.aws"' in bootstrap
+
+
+def test_nextjs_bootstrap_calls_helper_for_vercel_dir():
+    files = _build_config_files("p", ["nextjs"])
+    bootstrap = files[".devcontainer/bootstrap.sh"]
+    assert 'sunaba_fix_config_dir "$HOME/.local/share/com.vercel.cli"' in bootstrap
+
+
+def test_helper_defined_before_stack_snippets():
+    """Composition order matters: the helper must appear before any stack
+    invocation so bash parses it before reaching the call site.
+    """
+    files = _build_config_files("p", ["agents", "aws", "nextjs"])
+    bootstrap = files[".devcontainer/bootstrap.sh"]
+    helper_idx = bootstrap.index("sunaba_fix_config_dir() {")
+    first_call_idx = bootstrap.index('sunaba_fix_config_dir "$HOME/.claude"')
+    assert helper_idx < first_call_idx
+
+
+# --- Behavior tests for ~/.claude.json move/symlink/backup ---------------------
+#
+# These run the relevant slice of agents.json `_bootstrap` against a temp HOME
+# to confirm the four scenarios behave as intended:
+#   1. only ~/.claude.json (not symlink), no volume copy → moved + symlinked
+#   2. both files identical                              → root copy removed,
+#                                                          symlink created
+#   3. both files differ                                 → root copy backed up
+#                                                          as claude.json.import.<ts>.bak,
+#                                                          symlink to volume copy
+#   4. ~/.claude.json already a valid symlink            → unchanged
+
+def _agents_symlink_snippet() -> str:
+    """Extract just the ~/.claude.json move/symlink block from agents.json
+    so we can run it without invoking sudo-requiring chown/chmod lines.
+    """
+    repo_root = Path(__file__).resolve().parent.parent
+    data = json.loads(
+        (repo_root / "src/sunaba_cli/templates/stacks/agents.json").read_text()
+    )
+    lines = data["_bootstrap"]
+    for i, line in enumerate(lines):
+        if 'if [ -f "$HOME/.claude.json"' in line:
+            return "set -e\n" + "\n".join(lines[i:])
+    raise AssertionError("symlink snippet marker not found in agents.json")
+
+
+def _run_snippet(home: Path) -> None:
+    snippet = _agents_symlink_snippet()
+    env = {"HOME": str(home), "PATH": os.environ.get("PATH", "/usr/bin:/bin")}
+    subprocess.run(
+        ["bash", "-c", snippet], env=env, check=True, capture_output=True
+    )
+
+
+def test_claude_json_moved_into_volume_and_symlinked(tmp_path):
+    home = tmp_path
+    (home / ".claude").mkdir()
+    (home / ".claude.json").write_text("orig")
+
+    _run_snippet(home)
+
+    assert (home / ".claude" / "claude.json").read_text() == "orig"
+    link = home / ".claude.json"
+    assert link.is_symlink()
+    assert link.resolve() == (home / ".claude" / "claude.json").resolve()
+
+
+def test_claude_json_dedup_when_identical(tmp_path):
+    home = tmp_path
+    (home / ".claude").mkdir()
+    (home / ".claude.json").write_text("same")
+    (home / ".claude" / "claude.json").write_text("same")
+
+    _run_snippet(home)
+
+    link = home / ".claude.json"
+    assert link.is_symlink()
+    assert (home / ".claude" / "claude.json").read_text() == "same"
+    # No backup file on identical path
+    assert not list((home / ".claude").glob("claude.json.import.*.bak"))
+
+
+def test_claude_json_conflict_creates_backup(tmp_path):
+    home = tmp_path
+    (home / ".claude").mkdir()
+    (home / ".claude.json").write_text("from-dotfiles")
+    (home / ".claude" / "claude.json").write_text("from-volume")
+
+    _run_snippet(home)
+
+    backups = sorted((home / ".claude").glob("claude.json.import.*.bak"))
+    assert len(backups) == 1, list((home / ".claude").iterdir())
+    assert backups[0].read_text() == "from-dotfiles"
+    # Volume version preserved unchanged
+    assert (home / ".claude" / "claude.json").read_text() == "from-volume"
+    link = home / ".claude.json"
+    assert link.is_symlink()
+    assert link.resolve() == (home / ".claude" / "claude.json").resolve()
+
+
+def test_claude_json_existing_symlink_is_left_alone(tmp_path):
+    home = tmp_path
+    (home / ".claude").mkdir()
+    (home / ".claude" / "claude.json").write_text("vol")
+    (home / ".claude.json").symlink_to(home / ".claude" / "claude.json")
+
+    _run_snippet(home)
+
+    link = home / ".claude.json"
+    assert link.is_symlink()
+    assert (home / ".claude" / "claude.json").read_text() == "vol"
+    assert not list((home / ".claude").glob("claude.json.import.*.bak"))
+
+
+def test_composed_bootstrap_passes_bash_syntax_check(tmp_path):
+    """All-stacks composition must produce a syntactically valid script."""
+    files = _build_config_files(
+        "p", ["agents", "aws", "nextjs", "playwright", "python", "docker"]
+    )
+    script_path = tmp_path / "bootstrap.sh"
+    script_path.write_text(files[".devcontainer/bootstrap.sh"])
+    result = subprocess.run(
+        ["bash", "-n", str(script_path)], capture_output=True, text=True
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_compose_playwright_bootstrap_installs_chromium_with_deps():

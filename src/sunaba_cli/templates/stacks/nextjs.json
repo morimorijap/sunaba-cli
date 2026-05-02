@@ -1,7 +1,10 @@
 {
-  "_description": "Next.js: vercel CLI + eslint/tailwind extensions (Node.js is in base)",
+  "_description": "Next.js: vercel CLI + eslint/tailwind extensions, persisted ~/.local/share/com.vercel.cli (Node.js is in base)",
   "features": {},
   "postStartCommand": "bash -lc 'if [ -f package-lock.json ]; then npm ci --ignore-scripts; fi'",
+  "mounts": [
+    "source=vercel-config,target=/home/vscode/.local/share/com.vercel.cli,type=volume"
+  ],
   "customizations": {
     "vscode": {
       "extensions": [
@@ -15,6 +18,7 @@
   },
   "_bootstrap": [
     "# --- nextjs/vercel ---",
+    "sunaba_fix_config_dir \"$HOME/.local/share/com.vercel.cli\"",
     "npm install -g vercel@latest"
   ],
   "_dependabot": {
