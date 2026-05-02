@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -156,6 +158,114 @@ def test_helper_defined_before_stack_snippets():
     helper_idx = bootstrap.index("sunaba_fix_config_dir() {")
     first_call_idx = bootstrap.index('sunaba_fix_config_dir "$HOME/.claude"')
     assert helper_idx < first_call_idx
+
+
+# --- Behavior tests for ~/.claude.json move/symlink/backup ---------------------
+#
+# These run the relevant slice of agents.json `_bootstrap` against a temp HOME
+# to confirm the four scenarios behave as intended:
+#   1. only ~/.claude.json (not symlink), no volume copy → moved + symlinked
+#   2. both files identical                              → root copy removed,
+#                                                          symlink created
+#   3. both files differ                                 → root copy backed up
+#                                                          as claude.json.import.<ts>.bak,
+#                                                          symlink to volume copy
+#   4. ~/.claude.json already a valid symlink            → unchanged
+
+def _agents_symlink_snippet() -> str:
+    """Extract just the ~/.claude.json move/symlink block from agents.json
+    so we can run it without invoking sudo-requiring chown/chmod lines.
+    """
+    repo_root = Path(__file__).resolve().parent.parent
+    data = json.loads(
+        (repo_root / "src/sunaba_cli/templates/stacks/agents.json").read_text()
+    )
+    lines = data["_bootstrap"]
+    for i, line in enumerate(lines):
+        if 'if [ -f "$HOME/.claude.json"' in line:
+            return "set -e\n" + "\n".join(lines[i:])
+    raise AssertionError("symlink snippet marker not found in agents.json")
+
+
+def _run_snippet(home: Path) -> None:
+    snippet = _agents_symlink_snippet()
+    env = {"HOME": str(home), "PATH": os.environ.get("PATH", "/usr/bin:/bin")}
+    subprocess.run(
+        ["bash", "-c", snippet], env=env, check=True, capture_output=True
+    )
+
+
+def test_claude_json_moved_into_volume_and_symlinked(tmp_path):
+    home = tmp_path
+    (home / ".claude").mkdir()
+    (home / ".claude.json").write_text("orig")
+
+    _run_snippet(home)
+
+    assert (home / ".claude" / "claude.json").read_text() == "orig"
+    link = home / ".claude.json"
+    assert link.is_symlink()
+    assert link.resolve() == (home / ".claude" / "claude.json").resolve()
+
+
+def test_claude_json_dedup_when_identical(tmp_path):
+    home = tmp_path
+    (home / ".claude").mkdir()
+    (home / ".claude.json").write_text("same")
+    (home / ".claude" / "claude.json").write_text("same")
+
+    _run_snippet(home)
+
+    link = home / ".claude.json"
+    assert link.is_symlink()
+    assert (home / ".claude" / "claude.json").read_text() == "same"
+    # No backup file on identical path
+    assert not list((home / ".claude").glob("claude.json.import.*.bak"))
+
+
+def test_claude_json_conflict_creates_backup(tmp_path):
+    home = tmp_path
+    (home / ".claude").mkdir()
+    (home / ".claude.json").write_text("from-dotfiles")
+    (home / ".claude" / "claude.json").write_text("from-volume")
+
+    _run_snippet(home)
+
+    backups = sorted((home / ".claude").glob("claude.json.import.*.bak"))
+    assert len(backups) == 1, list((home / ".claude").iterdir())
+    assert backups[0].read_text() == "from-dotfiles"
+    # Volume version preserved unchanged
+    assert (home / ".claude" / "claude.json").read_text() == "from-volume"
+    link = home / ".claude.json"
+    assert link.is_symlink()
+    assert link.resolve() == (home / ".claude" / "claude.json").resolve()
+
+
+def test_claude_json_existing_symlink_is_left_alone(tmp_path):
+    home = tmp_path
+    (home / ".claude").mkdir()
+    (home / ".claude" / "claude.json").write_text("vol")
+    (home / ".claude.json").symlink_to(home / ".claude" / "claude.json")
+
+    _run_snippet(home)
+
+    link = home / ".claude.json"
+    assert link.is_symlink()
+    assert (home / ".claude" / "claude.json").read_text() == "vol"
+    assert not list((home / ".claude").glob("claude.json.import.*.bak"))
+
+
+def test_composed_bootstrap_passes_bash_syntax_check(tmp_path):
+    """All-stacks composition must produce a syntactically valid script."""
+    files = _build_config_files(
+        "p", ["agents", "aws", "nextjs", "playwright", "python", "docker"]
+    )
+    script_path = tmp_path / "bootstrap.sh"
+    script_path.write_text(files[".devcontainer/bootstrap.sh"])
+    result = subprocess.run(
+        ["bash", "-n", str(script_path)], capture_output=True, text=True
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_compose_playwright_bootstrap_installs_chromium_with_deps():

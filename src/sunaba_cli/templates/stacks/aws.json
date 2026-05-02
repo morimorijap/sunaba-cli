@@ -25,8 +25,12 @@
     "  sudo /tmp/aws/install --update",
     "  rm -rf /tmp/aws /tmp/awscliv2.zip",
     "fi",
-    "# Default AWS region (overrides aws configure default of us-east-1)",
-    "aws configure set region ap-northeast-1 2>/dev/null || true",
+    "# Default AWS region — only set if the user has not configured one in",
+    "# the persistent ~/.aws volume, so we don't overwrite their preference",
+    "# on every container create.",
+    "if ! aws configure get region >/dev/null 2>&1; then",
+    "  aws configure set region ap-northeast-1 2>/dev/null || true",
+    "fi",
     "if ! command -v sam >/dev/null 2>&1; then pip install aws-sam-cli 2>/dev/null || true; fi"
   ]
 }
