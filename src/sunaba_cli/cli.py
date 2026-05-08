@@ -139,6 +139,85 @@ def _interactive_select_stacks() -> list[str]:
         return unique
 
 
+def _build_stack_files(stacks: list[str]) -> dict[str, str]:
+    """Read each chosen stack's `_files` map and return {dest: content}.
+
+    `_files` maps a project-relative destination path to a source path under
+    `templates/`. Sources are resolved under `TEMPLATES_DIR`; destinations are
+    validated to reject `..` and absolute paths in callers via `_safe_target`.
+
+    Collision rule: later stacks in the input list overwrite earlier ones
+    (same convention as the deep-merge composer's scalar overwrite).
+    """
+    files: dict[str, str] = {}
+    for name in stacks:
+        stack_path = TEMPLATES_DIR / "stacks" / f"{name}.json"
+        if not stack_path.exists():
+            continue
+        data = json.loads(stack_path.read_text())
+        for dest, source_rel in (data.get("_files") or {}).items():
+            if Path(dest).is_absolute() or ".." in Path(dest).parts:
+                raise ValueError(
+                    f"Stack '{name}' declares unsafe _files destination: {dest}"
+                )
+            source_path = TEMPLATES_DIR / source_rel
+            resolved = source_path.resolve()
+            if not resolved.is_relative_to(TEMPLATES_DIR.resolve()):
+                raise ValueError(
+                    f"Stack '{name}' _files source escapes templates: {source_rel}"
+                )
+            if not resolved.exists():
+                raise FileNotFoundError(
+                    f"Stack '{name}' _files source missing: {source_rel}"
+                )
+            files[dest] = resolved.read_text()
+    return files
+
+
+def _stacks_owning_path(stacks: list[str]) -> dict[str, list[str]]:
+    """Return {dest_path: [stack_name, ...]} for every `_files`-emitted path.
+
+    Used by orphan reporting on `rebuild --remove`. Order in the value list
+    matches stack ordering (later stacks at the end).
+    """
+    owners: dict[str, list[str]] = {}
+    for name in stacks:
+        stack_path = TEMPLATES_DIR / "stacks" / f"{name}.json"
+        if not stack_path.exists():
+            continue
+        data = json.loads(stack_path.read_text())
+        for dest in (data.get("_files") or {}).keys():
+            owners.setdefault(dest, []).append(name)
+    return owners
+
+
+def _scan_orphans(
+    project_dir: Path, removed_stacks: list[str], remaining_stacks: list[str]
+) -> list[tuple[str, list[str]]]:
+    """Return [(relpath, [removed_stack_owners])] for files left behind.
+
+    A file is an orphan if (a) it currently exists in the project, (b) at
+    least one of `removed_stacks` would have emitted it via `_files`, and
+    (c) no stack in `remaining_stacks` would emit it.
+
+    We do NOT delete. We report so the user can `rm` themselves.
+    """
+    all_known = set(available_stacks())
+    removed_owners = _stacks_owning_path(
+        [s for s in removed_stacks if s in all_known]
+    )
+    remaining_emitted = set(_stacks_owning_path(remaining_stacks).keys())
+    orphans: list[tuple[str, list[str]]] = []
+    for relpath, owners in removed_owners.items():
+        if relpath in remaining_emitted:
+            continue
+        target = project_dir / relpath
+        if target.exists():
+            orphans.append((relpath, owners))
+    orphans.sort(key=lambda x: x[0])
+    return orphans
+
+
 def _build_config_files(
     name: str, stacks: list[str], *, no_devcontainer: bool = False
 ) -> dict[str, str]:
@@ -147,6 +226,9 @@ def _build_config_files(
     When no_devcontainer is True, `.devcontainer/*` are skipped and
     `dependabot.yml` is filtered to drop devcontainer/docker ecosystems.
     Host-agnostic files (`.mcp.json`, `.vscode/settings.json`) are still emitted.
+
+    Stack `_files` emissions (e.g. `--stack harness` adds `.claude/...`) are
+    merged in here too. Later stacks overwrite earlier on collision.
     """
     config = compose(stacks)
     config["name"] = f"sunaba-{name}"
@@ -187,6 +269,9 @@ def _build_config_files(
         files[".vscode/settings.json"] = (
             json.dumps(vscode_settings, indent=2, ensure_ascii=False) + "\n"
         )
+
+    # Stack `_files` emissions (later stacks win on collision).
+    files.update(_build_stack_files(stacks))
 
     return files
 
@@ -356,7 +441,10 @@ def new(
         click.echo(f"  Created {relpath}")
 
     if not no_agents:
-        copied = copy_agent_files(project_dir)
+        # Skip agent files that a stack `_files` map already wrote so we don't
+        # clobber e.g. the harness stack's AGENTS.md with the generic one.
+        skip = {fname for fname in ("AGENTS.md", "CLAUDE.md", "GEMINI.md", "skills.md") if fname in files}
+        copied = copy_agent_files(project_dir, skip=skip)
         if copied:
             click.echo(f"  Copied agent files: {', '.join(copied)}")
 
@@ -531,6 +619,22 @@ def rebuild(
     click.echo(f"\nWrote {len(written)} file(s).")
     register_project(name, project_dir, new_stacks)
     click.echo(f"Registry updated. Project now uses: {', '.join(new_stacks)}")
+
+    removed = [s for s in current_stacks if s not in new_stacks]
+    if removed:
+        orphans = _scan_orphans(project_dir, removed, new_stacks)
+        if orphans:
+            click.echo(
+                f"\nStack(s) {', '.join(removed)} were removed. "
+                "The following files are no longer managed by any selected stack "
+                "and were left in place:"
+            )
+            for relpath, owners in orphans:
+                click.echo(f"  {relpath}    (was emitted by --stack {', '.join(owners)})")
+            click.echo(
+                "\nDelete them manually if you no longer need them, or restore the "
+                f"stack(s) with:  sunaba rebuild {name} --add {' --add '.join(removed)}"
+            )
 
 
 @main.command()
