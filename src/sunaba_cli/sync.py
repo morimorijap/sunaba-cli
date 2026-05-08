@@ -58,15 +58,39 @@ def list_projects() -> dict[str, ProjectEntry]:
     return load_registry()
 
 
-def copy_agent_files(target_dir: Path) -> list[str]:
+def _stacks_emit_path(stacks: list[str], relpath: str) -> bool:
+    """True if any of `stacks` declares `relpath` in its `_files` map.
+
+    Used by sync to avoid clobbering files that are owned by a stack
+    template (e.g. `--stack harness` ships its own AGENTS.md).
+    """
+    for name in stacks:
+        stack_path = TEMPLATES_DIR / "stacks" / f"{name}.json"
+        if not stack_path.exists():
+            continue
+        data = json.loads(stack_path.read_text())
+        if relpath in (data.get("_files") or {}):
+            return True
+    return False
+
+
+def copy_agent_files(
+    target_dir: Path, *, skip: set[str] | None = None
+) -> list[str]:
     """Copy agent instruction files to target directory. Returns list of copied files.
 
     Validates that the target directory is real (not a symlink) and that
     each destination file does not escape the target via symlinks.
+
+    `skip` is a set of basenames to leave alone. Used so sync does not
+    clobber files that a selected stack owns via its `_files` map.
     """
+    skip = skip or set()
     resolved_target = target_dir.resolve()
     copied = []
     for fname in AGENT_FILES:
+        if fname in skip:
+            continue
         src = AGENTS_DIR / fname
         if not src.exists():
             continue
@@ -82,15 +106,26 @@ def copy_agent_files(target_dir: Path) -> list[str]:
     return copied
 
 
+def _skip_for_stacks(stacks: list[str]) -> set[str]:
+    """Return the set of agent-file basenames a stack list claims via `_files`."""
+    return {fname for fname in AGENT_FILES if _stacks_emit_path(stacks, fname)}
+
+
 def sync_project(name: str) -> tuple[Path | None, list[str]]:
-    """Sync agent files for a registered project. Returns (project_path, copied_files)."""
+    """Sync agent files for a registered project. Returns (project_path, copied_files).
+
+    Files that the project's selected stacks emit via their `_files` map
+    are NOT copied — they are owned by the stack template and were written
+    by `sunaba new` / `sunaba rebuild` directly.
+    """
     entry = get_project(name)
     if entry is None:
         return None, []
     project_path = Path(entry["path"])
     if not project_path.exists():
         return None, []
-    copied = copy_agent_files(project_path)
+    skip = _skip_for_stacks(entry.get("stacks") or [])
+    copied = copy_agent_files(project_path, skip=skip)
     return project_path, copied
 
 
@@ -100,6 +135,7 @@ def sync_all() -> list[tuple[str, Path, list[str]]]:
     for name, entry in load_registry().items():
         project_path = Path(entry["path"])
         if project_path.exists():
-            copied = copy_agent_files(project_path)
+            skip = _skip_for_stacks(entry.get("stacks") or [])
+            copied = copy_agent_files(project_path, skip=skip)
             results.append((name, project_path, copied))
     return results

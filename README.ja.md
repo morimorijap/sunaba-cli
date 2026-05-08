@@ -104,6 +104,7 @@ sunaba new local --stack python --no-devcontainer
 | `agents` | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` をホストから注入 |
 | `docker` | `docker-outside-of-docker` (ホストの Docker daemon にアクセス) |
 | `playwright` | Chromium + Linux 依存ライブラリ (Playwright / Chrome DevTools MCP の E2E 用) |
+| `harness` | Claude Code 向け harness テンプレート: `.claude/settings.json` (permissions + Stop hook)、silent-on-success な `verify.sh`、オンデマンド skill、planner / reviewer / verifier 役割定義、60行以内の ratchet `AGENTS.md`、`claudedocs/` トレースディレクトリ。**セッション境界での agent 挙動が変わるため opt-in。** |
 
 ## セキュリティについて (必読)
 
@@ -136,6 +137,10 @@ sunaba new local --stack python --no-devcontainer
 - **エージェントそのものの制約**: このツールは AI エージェント自体をサンドボックス化
   するものではありません。コンテナ内で `rm -rf` したりシークレットを push したりは
   可能です。**sandbox が守るのはホストであり、あなたの repo ではありません。**
+- **`--stack harness`**: 各エージェントセッション終了時に `bash .claude/hooks/verify.sh`
+  を走らせる Claude Code Stop hook を仕込みます。hook はテンプレートなので、コードと
+  同じ目で review してください。任意のローカルコマンドを実行できます。permissions リストは
+  ルーチン操作の承認プロンプトを減らしますが、**セキュリティ境界ではありません。**
 
 脆弱性の報告は [SECURITY.md](SECURITY.md) を参照してください。
 

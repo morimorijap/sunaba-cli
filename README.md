@@ -107,6 +107,7 @@ the MCP runtime (`npx`, `uvx`), and stack-specific tools (e.g. `uv`, `aws`,
 | `agents` | Injects `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` from host |
 | `docker` | `docker-outside-of-docker` (access host Docker daemon) |
 | `playwright` | Chromium + Linux deps for Playwright / Chrome DevTools MCP (E2E browser automation) |
+| `harness` | Claude Code-oriented harness templates: `.claude/settings.json` (permissions + Stop hook), a silent-on-success `verify.sh`, on-demand skills, planner / reviewer / verifier sub-agent role files, a 60-line ratchet `AGENTS.md`, and a `claudedocs/` trace directory. **Opt-in because it changes agent behavior at session boundaries.** |
 
 List them at runtime:
 
@@ -260,6 +261,11 @@ before using `sunaba-cli` on sensitive work.
 - **Your own prompts**: `sunaba-cli` does not sandbox the AI agents
   themselves. An agent can still `rm -rf` files inside the container, commit
   and push secrets, etc. The sandbox protects your host, not your repo.
+- **`--stack harness`**: ships a Claude Code Stop hook that runs
+  `bash .claude/hooks/verify.sh` after every agent session. The hook is a
+  template — review it like code. It can run any local command. The
+  permissions list reduces approval prompts for routine tools, but it is
+  **not** a security boundary.
 
 Report vulnerabilities via GitHub Security Advisories or an issue — see
 [SECURITY.md](SECURITY.md).
