@@ -340,6 +340,38 @@ source ~/.zshrc
 colima start
 ```
 
+## Design notes / roadmap
+
+Larger design changes are worked through in the open under
+[`thinking/`](thinking/) before they land as code. Each entry is a
+self-contained set of notes (current state → research → independent
+LLM reviews → synthesized proposal) covering one area of the project.
+
+Drafts in flight as of 2026-05:
+
+- [`thinking/2026-05-09-harness-engineering/`](thinking/2026-05-09-harness-engineering/) —
+  applying harness-engineering principles (OpenAI / Martin Fowler /
+  HumanLayer / Addy Osmani / Red Hat) to the generated agent
+  scaffolding. Introduces `--stack harness` and the `_files`
+  template-emission mechanism that subsequent proposals build on.
+- [`thinking/2026-05-09-stack-aware-agent-files/`](thinking/2026-05-09-stack-aware-agent-files/) —
+  making the generated `AGENTS.md` / `CLAUDE.md` / `GEMINI.md` /
+  `skills.md` reflect the stacks the user actually selected, with
+  per-stack fragments and a registry-flagged sync mode.
+- [`thinking/2026-05-09-secrets-management/`](thinking/2026-05-09-secrets-management/) —
+  expanded `.gitignore` baseline, opt-in `--stack secrets` (gitleaks
+  pre-commit + per-cloud docs), and the Azure
+  Foundry → APIM → Gemini → Cosmos "key behind a proxy" pattern.
+- [`thinking/2026-05-09-rules-and-autonomy/`](thinking/2026-05-09-rules-and-autonomy/) —
+  multi-target path-scoped rules (`--stack rules`) and an opt-in
+  autonomous environment (`--stack autopilot`) with structured
+  Stop-hook re-engage, budget caps, and a subagent dispatch protocol.
+
+These are **drafts under review**, not shipped features. The shape
+is intentional: docs land first so the design can be argued with
+before implementation. See [`thinking/README.md`](thinking/README.md)
+for the implementation order and how the proposals interact.
+
 ## Contributing
 
 Issues and PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).

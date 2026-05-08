@@ -202,6 +202,36 @@ git push                   # SSH 経由で push できる
 - Docker 互換ランタイム (Docker Desktop / Colima / Rancher Desktop 等)
 - VS Code + Dev Containers 拡張
 
+## 設計メモ / ロードマップ
+
+大きめの設計変更は、コード化する前に [`thinking/`](thinking/) で
+公開設計ドキュメントとして練ります。各エントリは「現状把握 → リサーチ
+→ 独立した LLM レビュー → 統合提案」という自己完結セットです。
+
+2026-05 時点の draft:
+
+- [`thinking/2026-05-09-harness-engineering/`](thinking/2026-05-09-harness-engineering/) —
+  OpenAI / Martin Fowler / HumanLayer / Addy Osmani / Red Hat の
+  harness engineering 観点を生成テンプレートに反映。`--stack harness`
+  と、後続提案の基盤になる `_files` テンプレート出力機構を導入。
+- [`thinking/2026-05-09-stack-aware-agent-files/`](thinking/2026-05-09-stack-aware-agent-files/) —
+  生成される `AGENTS.md` / `CLAUDE.md` / `GEMINI.md` / `skills.md` を
+  選択された stack に応じて差し替える。stack 別 fragment と、
+  registry flag による opt-in な sync モードを追加。
+- [`thinking/2026-05-09-secrets-management/`](thinking/2026-05-09-secrets-management/) —
+  `.gitignore` の baseline 拡張、opt-in な `--stack secrets`(gitleaks
+  pre-commit + クラウド別ドキュメント)、Azure Foundry → APIM →
+  Gemini → Cosmos の「key behind a proxy」パターン文書化。
+- [`thinking/2026-05-09-rules-and-autonomy/`](thinking/2026-05-09-rules-and-autonomy/) —
+  multi-target な path-scoped rule(`--stack rules`)と opt-in な
+  自走環境(`--stack autopilot`)。構造化 Stop hook 再起動、budget
+  cap、subagent dispatch protocol を含む。
+
+これらは **draft レビュー中** であり、まだ shipping された機能では
+ありません。意図的にドキュメントを先に置き、実装前に議論できる形に
+しています。実装順序と提案間の相互作用は
+[`thinking/README.md`](thinking/README.md) を参照してください。
+
 ## ライセンス
 
 MIT — [LICENSE](LICENSE) 参照。
