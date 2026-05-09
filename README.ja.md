@@ -105,6 +105,7 @@ sunaba new local --stack python --no-devcontainer
 | `docker` | `docker-outside-of-docker` (ホストの Docker daemon にアクセス) |
 | `playwright` | Chromium + Linux 依存ライブラリ (Playwright / Chrome DevTools MCP の E2E 用) |
 | `harness` | Claude Code 向け harness テンプレート: `.claude/settings.json` (permissions + Stop hook)、silent-on-success な `verify.sh`、オンデマンド skill、planner / reviewer / verifier 役割定義、60行以内の ratchet `AGENTS.md`、`claudedocs/` トレースディレクトリ。**セッション境界での agent 挙動が変わるため opt-in。** |
+| `secrets` | Secret 漏洩防止スキャフォールド: `gitleaks` を固定 tag で pin した `.pre-commit-config.yaml`、`.gitleaks.toml` allowlist、CI scan workflow、`docs/secrets/` 配下のクラウド別ドキュメント (Vercel · Firebase · AWS · GCP · Azure Foundry → APIM → Gemini → Cosmos)。**コミット時挙動が変わる(検知時は `git commit` がブロック)ため opt-in。** |
 
 ## セキュリティについて (必読)
 

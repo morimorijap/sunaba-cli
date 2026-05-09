@@ -285,8 +285,11 @@ def test_stack_aware_agents_md_reflects_python_stack(tmp_path, isolated_registry
     project = workspace / "py"
     agents = (project / "AGENTS.md").read_text()
     assert "uv run pytest" in agents
-    # nextjs guidance should NOT be present.
-    assert "vercel" not in agents.lower()
+    # The nextjs *summary fragment* should NOT be present. Match on a
+    # fragment-specific phrase rather than a generic word like "vercel"
+    # which can legitimately appear in the base Secrets section.
+    assert "Node 22" not in agents
+    assert "NEXT_PUBLIC_*" not in agents
 
 
 def test_stack_aware_emits_per_stack_docs(tmp_path, isolated_registry):
@@ -364,6 +367,110 @@ def test_stack_aware_user_region_preserved_across_sync(tmp_path, isolated_regist
 
     final = agents_path.read_text()
     assert "SENTINEL_42_PRESERVE_ME" in final
+
+
+# --- Secrets (Phase 3) E2E ---
+
+
+def test_sunaba_new_writes_expanded_gitignore(tmp_path, isolated_registry):
+    """`sunaba new` writes the expanded baseline `.gitignore` regardless of stack."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    r = _run(
+        ["new", "gi", "--stack", "python", "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert r.returncode == 0, r.stderr
+    gi = (workspace / "gi" / ".gitignore").read_text()
+    # New baseline patterns
+    assert "*.pem" in gi
+    assert "**/serviceAccount*.json" in gi
+    assert ".claude/settings.local.json" in gi
+    # Old baseline patterns still there
+    assert ".env" in gi
+    assert "node_modules/" in gi
+
+
+def test_sunaba_new_with_secrets_stack_emits_docs_and_pre_commit(tmp_path, isolated_registry):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    r = _run(
+        [
+            "new", "sek",
+            "--stack", "python",
+            "--stack", "secrets",
+            "--no-devcontainer", "--no-prompt",
+        ],
+        cwd=workspace,
+    )
+    assert r.returncode == 0, r.stderr
+    project = workspace / "sek"
+    assert (project / ".pre-commit-config.yaml").exists()
+    assert (project / ".gitleaks.toml").exists()
+    assert (project / ".github" / "workflows" / "gitleaks.yml").exists()
+    assert (project / "docs" / "secrets" / "README.md").exists()
+    assert (project / "docs" / "secrets" / "azure-foundry-apim-gemini-cosmos.md").exists()
+
+
+def test_sync_gitignore_dry_run_does_not_write(tmp_path, isolated_registry):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    r1 = _run(
+        ["new", "ud", "--stack", "python", "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert r1.returncode == 0, r1.stderr
+    project = workspace / "ud"
+    # Hand-edit the .gitignore down to a smaller subset (legacy shape).
+    (project / ".gitignore").write_text(".env\nnode_modules/\n")
+    # Snapshot before
+    before = (project / ".gitignore").read_text()
+    r2 = _run(["sync-gitignore", "ud", "--dry-run"], cwd=workspace)
+    assert r2.returncode == 0, r2.stderr
+    after = (project / ".gitignore").read_text()
+    assert before == after  # not written
+    assert "dry run" in (r2.stdout + r2.stderr).lower()
+
+
+def test_sync_gitignore_writes_baseline_and_preserves_user_lines(tmp_path, isolated_registry):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    r1 = _run(
+        ["new", "uw", "--stack", "python", "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert r1.returncode == 0, r1.stderr
+    project = workspace / "uw"
+    # Replace gitignore with a legacy + custom-line mix.
+    (project / ".gitignore").write_text(
+        ".env\nnode_modules/\nmy-custom-dir/\n# my comment\n"
+    )
+    r2 = _run(["sync-gitignore", "uw"], cwd=workspace)
+    assert r2.returncode == 0, r2.stderr
+    final = (project / ".gitignore").read_text()
+    # Baseline patterns now present.
+    assert "*.pem" in final
+    assert "**/serviceAccount*.json" in final
+    # User-specific line preserved.
+    assert "my-custom-dir/" in final
+
+
+def test_rebuild_does_not_overwrite_gitignore(tmp_path, isolated_registry):
+    """User edits to `.gitignore` survive `sunaba rebuild`."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    r1 = _run(
+        ["new", "rb", "--stack", "python", "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert r1.returncode == 0, r1.stderr
+    project = workspace / "rb"
+    # User edits .gitignore.
+    (project / ".gitignore").write_text(".env\nMY_CUSTOM_GITIGNORE_LINE\n")
+    r2 = _run(["rebuild", "rb", "--add", "secrets", "--yes"], cwd=workspace)
+    assert r2.returncode == 0, f"stderr: {r2.stderr}\nstdout: {r2.stdout}"
+    final = (project / ".gitignore").read_text()
+    assert "MY_CUSTOM_GITIGNORE_LINE" in final
 
 
 def test_legacy_static_mode_uses_verbatim_copy(tmp_path, isolated_registry):
