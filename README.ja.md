@@ -106,6 +106,8 @@ sunaba new local --stack python --no-devcontainer
 | `playwright` | Chromium + Linux 依存ライブラリ (Playwright / Chrome DevTools MCP の E2E 用) |
 | `harness` | Claude Code 向け harness テンプレート: `.claude/settings.json` (permissions + Stop hook)、silent-on-success な `verify.sh`、オンデマンド skill、planner / reviewer / verifier 役割定義、60行以内の ratchet `AGENTS.md`、`claudedocs/` トレースディレクトリ。**セッション境界での agent 挙動が変わるため opt-in。** |
 | `secrets` | Secret 漏洩防止スキャフォールド: `gitleaks` を固定 tag で pin した `.pre-commit-config.yaml`、`.gitleaks.toml` allowlist、CI scan workflow、`docs/secrets/` 配下のクラウド別ドキュメント (Vercel · Firebase · AWS · GCP · Azure Foundry → APIM → Gemini → Cosmos)。**コミット時挙動が変わる(検知時は `git commit` がブロック)ため opt-in。** |
+| `rules` | パススコープ付きルールを複数ターゲットに展開。`templates/rules/` のキャノニカル source 1 ファイルから `.cursor/rules/<name>.mdc`(Cursor の `globs:` / `alwaysApply:`)、`.claude/rules/<name>.md`(Claude の `paths:`)、`docs/agents/rules/<name>.md`(Codex / Gemini フォールバック)を生成。低リスクなコンテキスト改善で、ランタイム挙動は変わりません。 |
+| `autopilot` | Claude Code / Codex CLI 向けの opt-in な自走環境: budget cap (`SUNABA_AUTOPILOT_MAX_ITERS` / `_MINUTES` / `_CHANGED_FILES`)付き構造化 Stop hook 再起動、`.githooks/pre-push` によるブランチ保護、operational な planner / reviewer / verifier 役割定義(Claude `.claude/agents/*.md` + Codex `.codex/agents/*.toml`)、subagent dispatch protocol ドキュメント、`claudedocs/{plans,checkpoints}/`。**agent ランタイム挙動が変わる**(verifier 失敗時 Stop hook が再起動)。推奨呼び出し: `--stack harness --stack rules --stack autopilot` の順(autopilot の operational 役割定義が harness の seed を上書きするため)。Gemini CLI は honest gap として `docs/agents/gemini-autopilot-limitations.md` で扱う。 |
 
 ## セキュリティについて (必読)
 

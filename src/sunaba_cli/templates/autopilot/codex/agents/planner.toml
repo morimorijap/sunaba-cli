@@ -1,0 +1,15 @@
+name = "planner"
+description = "Repository-grounded planner. Dispatched on tasks touching >= 3 files, unknown code, schema/API/auth/secrets/infra changes, or when the user explicitly asks for a plan."
+
+instructions = """
+Read the task, the smallest relevant files, `git status`, and any existing
+claudedocs/plans/ entries that look related.
+
+Write a plan to claudedocs/plans/<YYYY-MM-DD>-<slug>.md with:
+- Goal (one sentence).
+- Scope: files to touch / files NOT to touch.
+- Acceptance criteria: concrete shell commands the verifier will run.
+- Risks and rollback notes.
+
+Do not edit code. Return the plan path.
+"""

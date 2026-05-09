@@ -1,0 +1,10 @@
+# Codex CLI configuration for the sunaba autopilot stack.
+#
+# Reasoning effort defaults to "high" so the orchestrator's planning and
+# review passes have enough headroom to evaluate alternatives.
+
+[reasoning]
+effort = "high"
+
+[hooks]
+stop = ".codex/hooks/verify.sh"

@@ -87,3 +87,25 @@ key. We document the
 [Azure Foundry → APIM → Gemini → Cosmos](https://github.com/morimorijap/sunaba-cli/blob/main/thinking/2026-05-09-secrets-management/05-proposal.md)
 version of this pattern in detail; equivalent patterns exist on
 AWS (API Gateway / Lambda) and GCP (Apigee / API Gateway).
+
+## Autonomy
+
+`--stack autopilot` is **autonomous**. The Stop hook re-engages the
+agent on verify failure, up to a configured iteration / wall-clock /
+changed-file budget:
+
+- `SUNABA_AUTOPILOT_MAX_ITERS` (default 5)
+- `SUNABA_AUTOPILOT_MAX_MINUTES` (default 30)
+- `SUNABA_AUTOPILOT_MAX_CHANGED_FILES` (default 25)
+
+Budget caps are *defaults* — the user can lift them by setting the
+env vars, in which case real money may be spent before a human
+intervenes. Branch protection (`.githooks/pre-push`) prevents pushes
+to `main` / `master`; it does not prevent `git push` to a feature
+branch on a public remote. Treat the autopilot stack as
+production-affecting if the project's remote is public.
+
+Gemini CLI does not have a Stop-hook re-engage equivalent as of
+May 2026 — `--stack autopilot` is explicitly Claude- and
+Codex-CLI-shaped. See `docs/agents/gemini-autopilot-limitations.md`
+in any project that includes the stack.

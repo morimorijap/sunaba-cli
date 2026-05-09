@@ -1,0 +1,8 @@
+{
+  "_description": "Multi-target path-scoped rule files. One canonical source under templates/rules/ renders to .cursor/rules/<name>.mdc, .claude/rules/<name>.md, and docs/agents/rules/<name>.md. Low-risk context improvement; no runtime behavior change.",
+  "_files": {},
+  "_rules": [
+    "rules/python-tests.rule.md",
+    "rules/nextjs-api.rule.md"
+  ]
+}

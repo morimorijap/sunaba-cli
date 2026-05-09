@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+# sunaba autopilot — block direct pushes to main / master from automated runs.
+# Override with `git push --no-verify` if you really mean it.
+set -e
+
+protected="refs/heads/main refs/heads/master"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  for ref in $protected; do
+    if [ "$remote_ref" = "$ref" ]; then
+      echo "sunaba autopilot: refusing push to $remote_ref" >&2
+      echo "Push to a feature branch instead. Override with --no-verify if you really mean it." >&2
+      exit 1
+    fi
+  done
+done

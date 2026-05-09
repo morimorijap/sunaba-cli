@@ -316,6 +316,134 @@ def _splice_user_region(new_content: str, existing_content: str) -> str:
     )
 
 
+def _parse_rule_frontmatter(text: str) -> tuple[dict, str]:
+    """Parse a rule file's YAML-ish frontmatter.
+
+    Supports the limited shape rule files use:
+      ---
+      name: foo
+      description: short text
+      globs:
+        - "tests/**/*.py"
+      alwaysApply: false
+      targets:
+        - claude
+        - cursor
+      ---
+      <body>
+
+    Returns (frontmatter_dict, body_str). Avoids a runtime PyYAML dependency.
+    """
+    if not text.startswith("---"):
+        raise ValueError("rule file is missing the leading `---`")
+    parts = text.split("\n---", 1)
+    if len(parts) < 2:
+        raise ValueError("rule file is missing the closing `---`")
+    fm_text = parts[0].lstrip("-").lstrip("\n")
+    body = parts[1].lstrip("\n")
+
+    fm: dict = {}
+    current_list_key: str | None = None
+    for raw in fm_text.splitlines():
+        line = raw.rstrip()
+        if not line.strip():
+            continue
+        if line.startswith(" ") and current_list_key is not None:
+            stripped = line.lstrip()
+            if stripped.startswith("- "):
+                value = stripped[2:].strip().strip("\"'")
+                fm[current_list_key].append(value)
+                continue
+        current_list_key = None
+        if ":" not in line:
+            continue
+        key, rest = line.split(":", 1)
+        key = key.strip()
+        rest = rest.strip()
+        if rest == "":
+            fm[key] = []
+            current_list_key = key
+        else:
+            fm[key] = rest.strip("\"'")
+    return fm, body
+
+
+def _render_rule(rule_text: str) -> dict[str, str]:
+    """Render a canonical rule source to its multi-target outputs."""
+    fm, body = _parse_rule_frontmatter(rule_text)
+    name = fm.get("name")
+    if not name:
+        raise ValueError("rule file missing `name` in frontmatter")
+    targets = fm.get("targets") or ["claude", "cursor", "codex", "gemini"]
+    description = fm.get("description", "")
+    globs = fm.get("globs") or []
+    always_apply = str(fm.get("alwaysApply", "false")).lower()
+
+    out: dict[str, str] = {}
+
+    if "cursor" in targets:
+        cursor_fm = ["---", f"description: {description}"]
+        if globs:
+            cursor_fm.append("globs:")
+            cursor_fm.extend(f"  - \"{g}\"" for g in globs)
+        cursor_fm.append(f"alwaysApply: {always_apply}")
+        cursor_fm.append("---")
+        out[f".cursor/rules/{name}.mdc"] = "\n".join(cursor_fm) + "\n\n" + body
+
+    if "claude" in targets:
+        # Claude path-specific rules use `paths:` rather than Cursor's `globs:`.
+        claude_fm = ["---", f"description: {description}"]
+        if globs:
+            claude_fm.append("paths:")
+            claude_fm.extend(f"  - \"{g}\"" for g in globs)
+        claude_fm.append("---")
+        out[f".claude/rules/{name}.md"] = "\n".join(claude_fm) + "\n\n" + body
+
+    if "codex" in targets or "gemini" in targets:
+        # Fallback: a docs page either CLI can read on demand. The proposal
+        # allows directory-scoped AGENTS.md / GEMINI.md when globs map
+        # cleanly to a single directory; that hierarchical placement is
+        # left for a follow-up.
+        if globs:
+            globs_block = "\n".join(f"- `{g}`" for g in globs)
+        else:
+            globs_block = "_(no glob scope; applies repo-wide)_"
+        preamble = (
+            f"# {name}\n\n"
+            f"_{description}_\n\n"
+            "**Globs:**\n\n"
+            f"{globs_block}\n\n"
+            "---\n\n"
+        )
+        out[f"docs/agents/rules/{name}.md"] = preamble + body
+
+    return out
+
+
+def _build_rule_files(stacks: list[str]) -> dict[str, str]:
+    """Walk each stack's `_rules` list and render every source."""
+    files: dict[str, str] = {}
+    for name in stacks:
+        stack_path = TEMPLATES_DIR / "stacks" / f"{name}.json"
+        if not stack_path.exists():
+            continue
+        data = json.loads(stack_path.read_text())
+        for rule_rel in data.get("_rules") or []:
+            rule_path = TEMPLATES_DIR / rule_rel
+            resolved = rule_path.resolve()
+            if not resolved.is_relative_to(TEMPLATES_DIR.resolve()):
+                raise ValueError(
+                    f"Stack '{name}' _rules source escapes templates: {rule_rel}"
+                )
+            if not resolved.exists():
+                raise FileNotFoundError(
+                    f"Stack '{name}' _rules source missing: {rule_rel}"
+                )
+            rendered = _render_rule(resolved.read_text())
+            files.update(rendered)
+    return files
+
+
 def _build_stack_files(stacks: list[str]) -> dict[str, str]:
     """Read each chosen stack's `_files` map and return {dest: content}.
 
@@ -456,6 +584,12 @@ def _build_config_files(
     # AFTER the stack-aware agent files so a stack like `harness` can
     # override the composed AGENTS.md with its stronger ratchet version.
     files.update(_build_stack_files(stacks))
+
+    # Stack `_rules` emissions (multi-target rule renders for Claude /
+    # Cursor / Codex / Gemini). Rule paths don't collide with the
+    # earlier passes' outputs, but `update()` keeps the same later-wins
+    # convention if anything ever does.
+    files.update(_build_rule_files(stacks))
 
     return files
 

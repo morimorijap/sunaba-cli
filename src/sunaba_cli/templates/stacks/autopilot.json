@@ -1,0 +1,25 @@
+{
+  "_description": "Opt-in autonomous environment: structured Stop-hook re-engage with budget caps, branch protection, subagent dispatch protocol, checkpoints. First-class templates for Claude AND Codex CLI. Gemini documented as honest gap. Recommends --stack harness and --stack rules in front of it.",
+  "_files": {
+    ".claude/hooks/verify.sh":                      "autopilot/claude/hooks/verify.sh",
+    ".claude/agents/planner.md":                    "autopilot/claude/agents/planner.md",
+    ".claude/agents/reviewer.md":                   "autopilot/claude/agents/reviewer.md",
+    ".claude/agents/verifier.md":                   "autopilot/claude/agents/verifier.md",
+    ".codex/config.toml":                           "autopilot/codex/config.toml",
+    ".codex/agents/planner.toml":                   "autopilot/codex/agents/planner.toml",
+    ".codex/agents/reviewer.toml":                  "autopilot/codex/agents/reviewer.toml",
+    ".codex/agents/verifier.toml":                  "autopilot/codex/agents/verifier.toml",
+    ".codex/hooks/verify.sh":                       "autopilot/codex/hooks/verify.sh",
+    ".githooks/pre-push":                           "autopilot/githooks/pre-push",
+    "scripts/install-githooks.sh":                  "autopilot/scripts/install-githooks.sh",
+    "claudedocs/plans/.gitkeep":                    "autopilot/claudedocs/plans/.gitkeep",
+    "claudedocs/checkpoints/.gitkeep":              "autopilot/claudedocs/checkpoints/.gitkeep",
+    "docs/agents/subagent-dispatch.md":             "autopilot/docs/subagent-dispatch.md",
+    "docs/agents/gemini-autopilot-limitations.md":  "autopilot/docs/gemini-autopilot-limitations.md",
+    ".sunaba/autopilot/.gitignore":                 "autopilot/state/.gitignore"
+  },
+  "_bootstrap": [
+    "# --- autopilot ---",
+    "if [ -f scripts/install-githooks.sh ]; then bash scripts/install-githooks.sh || true; fi"
+  ]
+}
