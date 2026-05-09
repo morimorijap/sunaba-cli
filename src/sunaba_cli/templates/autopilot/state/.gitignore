@@ -1,0 +1,6 @@
+# Autopilot runtime state — never commit. The verify.sh hook writes
+# iteration counters and last-failure logs here between Stop-hook
+# invocations. Logs may contain stack traces, file paths, and snippets
+# from failing tests.
+*
+!.gitignore

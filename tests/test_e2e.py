@@ -369,6 +369,86 @@ def test_stack_aware_user_region_preserved_across_sync(tmp_path, isolated_regist
     assert "SENTINEL_42_PRESERVE_ME" in final
 
 
+# --- Rules + Autopilot (Phase 4) E2E ---
+
+
+def test_sunaba_new_with_rules_emits_multi_target_renders(tmp_path, isolated_registry):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    r = _run(
+        ["new", "rl", "--stack", "python", "--stack", "rules",
+         "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert r.returncode == 0, r.stderr
+    project = workspace / "rl"
+    assert (project / ".cursor" / "rules" / "python-tests.mdc").exists()
+    assert (project / ".claude" / "rules" / "python-tests.md").exists()
+    assert (project / "docs" / "agents" / "rules" / "python-tests.md").exists()
+    cursor = (project / ".cursor" / "rules" / "python-tests.mdc").read_text()
+    claude = (project / ".claude" / "rules" / "python-tests.md").read_text()
+    assert "globs:" in cursor
+    assert "paths:" in claude
+
+
+def test_sunaba_new_with_autopilot_emits_full_structure(tmp_path, isolated_registry):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    r = _run(
+        ["new", "ap",
+         "--stack", "python",
+         "--stack", "harness",
+         "--stack", "autopilot",
+         "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert r.returncode == 0, r.stderr
+    project = workspace / "ap"
+    assert (project / ".claude" / "hooks" / "verify.sh").exists()
+    assert (project / ".claude" / "agents" / "planner.md").exists()
+    assert (project / ".codex" / "agents" / "verifier.toml").exists()
+    assert (project / ".codex" / "hooks" / "verify.sh").exists()
+    assert (project / ".githooks" / "pre-push").exists()
+    assert (project / "docs" / "agents" / "subagent-dispatch.md").exists()
+    assert (project / "docs" / "agents" / "gemini-autopilot-limitations.md").exists()
+    # Autopilot's planner overrides harness's because it comes later.
+    planner = (project / ".claude" / "agents" / "planner.md").read_text()
+    assert "claudedocs/plans/" in planner
+
+
+def test_autopilot_pre_push_hook_blocks_main_in_real_repo(tmp_path, isolated_registry):
+    """Wire the generated pre-push hook into a real `git` repo and verify
+    that pushing to refs/heads/main is rejected."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    r = _run(
+        ["new", "bp", "--stack", "python", "--stack", "autopilot",
+         "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert r.returncode == 0, r.stderr
+    project = workspace / "bp"
+
+    subprocess.run(
+        ["chmod", "+x", str(project / ".githooks" / "pre-push")], check=True
+    )
+    subprocess.run(["git", "init", "-q"], cwd=str(project), check=True)
+    subprocess.run(
+        ["git", "config", "core.hooksPath", ".githooks"],
+        cwd=str(project), check=True,
+    )
+
+    proc = subprocess.run(
+        ["bash", str(project / ".githooks" / "pre-push")],
+        input="refs/heads/main 0000 refs/heads/main 0000\n",
+        capture_output=True,
+        text=True,
+        cwd=str(project),
+    )
+    assert proc.returncode != 0
+    assert "main" in proc.stderr.lower()
+
+
 # --- Secrets (Phase 3) E2E ---
 
 
