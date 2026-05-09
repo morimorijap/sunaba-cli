@@ -1,0 +1,3 @@
+- **uv**: Python package manager + virtualenv. Use `uv add` / `uv sync`; do not invoke `pip install` directly.
+- **pytest**: test runner (`uv run pytest -q`).
+- **ruff**: formatter + linter (`uv run ruff check`, `uv run ruff format`).

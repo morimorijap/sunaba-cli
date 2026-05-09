@@ -1,0 +1,1 @@
+- **nextjs**: Node 22 + Vercel CLI. `npm test` / `npm run build`. Server-only env vars stay server-only; only `NEXT_PUBLIC_*` is browser-safe. See `docs/agents/nextjs.md`.

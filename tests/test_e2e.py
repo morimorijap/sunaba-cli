@@ -119,7 +119,12 @@ def test_sunaba_new_with_harness_emits_claude_directory(tmp_path, isolated_regis
 
 
 def test_sunaba_new_default_stack_does_not_emit_harness_files(tmp_path, isolated_registry):
-    """A project without --stack harness must not contain .claude/settings.json."""
+    """A project without --stack harness must not contain harness-specific paths.
+
+    Note: stack-aware composition (since Phase 2) does emit
+    `.claude/skills/sunaba-<stack>/SKILL.md` for stacks with a
+    guidance.md fragment. Those are *not* harness-specific.
+    """
     workspace = tmp_path / "workspace"
     workspace.mkdir()
 
@@ -130,7 +135,10 @@ def test_sunaba_new_default_stack_does_not_emit_harness_files(tmp_path, isolated
     assert result.returncode == 0, f"stderr: {result.stderr}\nstdout: {result.stdout}"
 
     project = workspace / "plain"
-    assert not (project / ".claude").exists()
+    # Harness-specific paths must not exist.
+    assert not (project / ".claude" / "settings.json").exists()
+    assert not (project / ".claude" / "hooks").exists()
+    assert not (project / ".claude" / "agents").exists()
     assert not (project / "claudedocs").exists()
 
 
@@ -147,7 +155,8 @@ def test_sunaba_rebuild_add_harness_emits_claude(tmp_path, isolated_registry):
     assert r1.returncode == 0, r1.stderr
 
     project = workspace / "lift"
-    assert not (project / ".claude").exists()
+    # Harness-specific paths must not yet exist.
+    assert not (project / ".claude" / "settings.json").exists()
 
     # Now add harness.
     r2 = _run(
@@ -257,3 +266,133 @@ def test_sunaba_stacks_lists_harness():
     result = _run(["stacks"], cwd=Path.cwd())
     assert result.returncode == 0
     assert "harness" in result.stdout
+
+
+# --- Stack-aware (Phase 2) E2E ---
+
+
+def test_stack_aware_agents_md_reflects_python_stack(tmp_path, isolated_registry):
+    """`sunaba new --stack python` produces an AGENTS.md with python-specific guidance."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    result = _run(
+        ["new", "py", "--stack", "python", "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert result.returncode == 0, result.stderr
+
+    project = workspace / "py"
+    agents = (project / "AGENTS.md").read_text()
+    assert "uv run pytest" in agents
+    # nextjs guidance should NOT be present.
+    assert "vercel" not in agents.lower()
+
+
+def test_stack_aware_emits_per_stack_docs(tmp_path, isolated_registry):
+    """Stacks with a guidance.md fragment produce docs/agents/<stack>.md."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    result = _run(
+        [
+            "new",
+            "twostack",
+            "--stack",
+            "python",
+            "--stack",
+            "nextjs",
+            "--no-devcontainer",
+            "--no-prompt",
+        ],
+        cwd=workspace,
+    )
+    assert result.returncode == 0, result.stderr
+
+    project = workspace / "twostack"
+    assert (project / "docs" / "agents" / "python.md").exists()
+    assert (project / "docs" / "agents" / "nextjs.md").exists()
+
+
+def test_stack_aware_emits_claude_skill_with_frontmatter(tmp_path, isolated_registry):
+    """A `--stack python` project ships .claude/skills/sunaba-python/SKILL.md
+    with YAML frontmatter for Claude's progressive disclosure."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    result = _run(
+        ["new", "skl", "--stack", "python", "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert result.returncode == 0, result.stderr
+
+    skill = (
+        workspace / "skl" / ".claude" / "skills" / "sunaba-python" / "SKILL.md"
+    )
+    assert skill.exists()
+    body = skill.read_text()
+    assert body.startswith("---\n")
+    assert "name: sunaba-python" in body
+
+
+def test_stack_aware_user_region_preserved_across_sync(tmp_path, isolated_registry):
+    """Editing the SUNABA USER region survives a subsequent `sunaba sync`."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    r1 = _run(
+        ["new", "edits", "--stack", "python", "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert r1.returncode == 0, r1.stderr
+
+    project = workspace / "edits"
+    agents_path = project / "AGENTS.md"
+    original = agents_path.read_text()
+    # Insert a sentinel inside the user region.
+    edited = original.replace(
+        "<!-- SUNABA USER START -->",
+        "<!-- SUNABA USER START -->\nSENTINEL_42_PRESERVE_ME",
+        1,
+    )
+    agents_path.write_text(edited)
+
+    # Run sync. For stack-aware projects, sync regenerates everything but
+    # splices the existing USER region back in.
+    r2 = _run(["sync", "edits"], cwd=workspace)
+    assert r2.returncode == 0, f"stderr: {r2.stderr}\nstdout: {r2.stdout}"
+
+    final = agents_path.read_text()
+    assert "SENTINEL_42_PRESERVE_ME" in final
+
+
+def test_legacy_static_mode_uses_verbatim_copy(tmp_path, isolated_registry):
+    """Legacy projects without `agent_files` in registry default to static
+    copy. We simulate this by manually rewriting the registry entry."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    r1 = _run(
+        ["new", "leg", "--stack", "python", "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert r1.returncode == 0, r1.stderr
+
+    # Force the registry entry to legacy "static" mode.
+    registry_path = (
+        Path(os.environ.get("HOME", "")) / ".config" / "sunaba-cli" / "registry.json"
+    )
+    assert registry_path.exists(), f"registry not at expected path {registry_path}"
+    reg = json.loads(registry_path.read_text())
+    reg["leg"]["agent_files"] = "static"
+    registry_path.write_text(json.dumps(reg, indent=2))
+
+    # sync should now copy templates/agents/base/AGENTS.md verbatim
+    # (no per-stack content injected — empty SUNABA STACKS section).
+    r2 = _run(["sync", "leg"], cwd=workspace)
+    assert r2.returncode == 0, f"stderr: {r2.stderr}\nstdout: {r2.stdout}"
+    project = workspace / "leg"
+    agents = (project / "AGENTS.md").read_text()
+    # Static copy of base/AGENTS.md has the delimiters but NO injected content.
+    assert "<!-- SUNABA STACKS START -->" in agents
+    assert "uv run pytest" not in agents

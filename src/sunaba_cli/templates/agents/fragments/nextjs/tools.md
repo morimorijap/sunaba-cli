@@ -1,0 +1,2 @@
+- **npm / node 22**: JavaScript / TypeScript toolchain (Node is in the base image; npm ships with it).
+- **vercel**: Vercel CLI for deployments and `vercel env pull`.
