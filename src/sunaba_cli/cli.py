@@ -142,6 +142,56 @@ def _interactive_select_stacks() -> list[str]:
 _AGENT_FILES_BASE_DIR = TEMPLATES_DIR / "agents" / "base"
 _AGENT_FRAGMENTS_DIR = TEMPLATES_DIR / "agents" / "fragments"
 
+
+def _default_gitignore() -> str:
+    """Return the project `.gitignore` baseline.
+
+    Covers the secret-leak file family (cloud creds, SSH keys, service
+    account JSON, agent local state, the wider `.env.*` family) plus the
+    usual build / cache / OS noise. Only written by `sunaba new`;
+    `sunaba rebuild` does not modify an existing `.gitignore` so user
+    edits are preserved.
+    """
+    return (
+        "# Environment files (never commit real values)\n"
+        ".env\n"
+        ".env.*\n"
+        "!.env.example\n"
+        "!.env.*.example\n"
+        ".envrc\n"
+        ".dev.vars\n"
+        "\n"
+        "# Cloud and local credentials\n"
+        ".aws/\n"
+        ".azure/\n"
+        ".gcloud/\n"
+        "gcloud-config/\n"
+        "credentials.json\n"
+        "**/serviceAccount*.json\n"
+        "**/service-account*.json\n"
+        "**/*-firebase-adminsdk-*.json\n"
+        "\n"
+        "# Private keys and certificates\n"
+        "*.pem\n"
+        "*.key\n"
+        "*.p12\n"
+        "*.pfx\n"
+        "id_rsa*\n"
+        "id_ed25519*\n"
+        "\n"
+        "# Agent-local state\n"
+        ".claude/settings.local.json\n"
+        ".codex/\n"
+        ".gemini/\n"
+        "\n"
+        "# Build / cache\n"
+        ".venv/\n"
+        "node_modules/\n"
+        "__pycache__/\n"
+        "*.pyc\n"
+        ".DS_Store\n"
+    )
+
 _STACKS_DELIMITER_START = "<!-- SUNABA STACKS START -->"
 _STACKS_DELIMITER_END = "<!-- SUNABA STACKS END -->"
 _USER_DELIMITER_START = "<!-- SUNABA USER START -->"
@@ -582,10 +632,7 @@ def new(
         if copied:
             click.echo(f"  Copied agent files: {', '.join(copied)}")
 
-    gitignore = (
-        ".venv/\nnode_modules/\n__pycache__/\n.env\n.env.local\n*.pyc\n.DS_Store\n"
-    )
-    (project_dir / ".gitignore").write_text(gitignore)
+    (project_dir / ".gitignore").write_text(_default_gitignore())
 
     register_project(name, project_dir, stacks)
 
@@ -793,6 +840,106 @@ def sync(name: str | None, sync_all_flag: bool):
     else:
         click.echo("Error: Provide a project name or use --all.", err=True)
         raise SystemExit(1)
+
+
+def _merge_gitignore(existing: str, baseline: str) -> tuple[str, list[str]]:
+    """Merge `baseline` into `existing`, preserving user lines that are
+    not already present. Returns (merged_text, added_lines).
+
+    Strategy: emit the baseline verbatim, then append any lines from
+    existing that don't already match a baseline line. This keeps the
+    `.gitignore`'s structure (sections / blank lines / comments)
+    deterministic and the user's additions visible at the end.
+    """
+    baseline_lines = baseline.splitlines()
+    baseline_pattern_lines = {
+        ln.strip() for ln in baseline_lines if ln.strip() and not ln.lstrip().startswith("#")
+    }
+    existing_lines = existing.splitlines()
+    extras: list[str] = []
+    for ln in existing_lines:
+        stripped = ln.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("#"):
+            continue
+        if stripped in baseline_pattern_lines:
+            continue
+        extras.append(ln)
+    merged = baseline.rstrip("\n") + "\n"
+    if extras:
+        merged += "\n# --- preserved from existing .gitignore ---\n"
+        merged += "\n".join(extras) + "\n"
+    return merged, extras
+
+
+@main.command("sync-gitignore")
+@click.argument("name_or_path", required=False)
+@click.option("--all", "sync_all_flag", is_flag=True, help="Walk every registered project.")
+@click.option("--dry-run", is_flag=True, default=False, help="Show diff without writing.")
+@click.option("--force", is_flag=True, default=False,
+              help="Apply to any directory, even if it isn't a registered sunaba project.")
+def sync_gitignore_cmd(
+    name_or_path: str | None, sync_all_flag: bool, dry_run: bool, force: bool
+):
+    """Bring an existing project's `.gitignore` up to the current sunaba baseline.
+
+    `sunaba new` writes the current baseline; `sunaba rebuild` does not
+    touch `.gitignore` (preserves user edits). Use this command on
+    existing projects after upgrading sunaba-cli to absorb new ignore
+    patterns (e.g. cloud credential files, agent local state) without
+    losing your own additions.
+
+    Examples:
+      sunaba sync-gitignore myapp           # diff + confirm
+      sunaba sync-gitignore myapp --dry-run # diff only
+      sunaba sync-gitignore --all           # walk every registered project
+    """
+    baseline = _default_gitignore()
+    targets: list[tuple[str, Path]] = []
+    if sync_all_flag:
+        for n, entry in list_projects().items():
+            p = Path(entry["path"])
+            if p.exists():
+                targets.append((n, p))
+    elif name_or_path:
+        try:
+            n, p, _stacks = _resolve_target(name_or_path)
+        except FileNotFoundError:
+            if force and Path(name_or_path).is_dir():
+                n, p = Path(name_or_path).name, Path(name_or_path).resolve()
+            else:
+                click.echo(
+                    f"Error: '{name_or_path}' is not a registered project. "
+                    "Pass --force to apply to any directory.",
+                    err=True,
+                )
+                raise SystemExit(1)
+        targets.append((n, p))
+    else:
+        click.echo("Error: Provide a project name/path or use --all.", err=True)
+        raise SystemExit(1)
+
+    any_changes = False
+    for n, project_dir in targets:
+        gi_path = _safe_target(project_dir, ".gitignore")
+        existing = gi_path.read_text() if gi_path.exists() else ""
+        merged, extras = _merge_gitignore(existing, baseline)
+        if existing == merged:
+            click.echo(f"  {n}: .gitignore already at baseline")
+            continue
+        any_changes = True
+        click.echo(f"\nProject: {n} ({project_dir})")
+        click.echo(f"  baseline lines added: ~{len([l for l in baseline.splitlines() if l.strip() and not l.lstrip().startswith('#')])}")
+        click.echo(f"  user lines preserved: {len(extras)}")
+        if dry_run:
+            click.echo("  (dry run — not written)")
+            continue
+        gi_path.write_text(merged)
+        click.echo(f"  wrote {gi_path}")
+
+    if not any_changes:
+        click.echo("\nNothing to update.")
 
 
 @main.command("list")

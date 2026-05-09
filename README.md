@@ -108,6 +108,7 @@ the MCP runtime (`npx`, `uvx`), and stack-specific tools (e.g. `uv`, `aws`,
 | `docker` | `docker-outside-of-docker` (access host Docker daemon) |
 | `playwright` | Chromium + Linux deps for Playwright / Chrome DevTools MCP (E2E browser automation) |
 | `harness` | Claude Code-oriented harness templates: `.claude/settings.json` (permissions + Stop hook), a silent-on-success `verify.sh`, on-demand skills, planner / reviewer / verifier sub-agent role files, a 60-line ratchet `AGENTS.md`, and a `claudedocs/` trace directory. **Opt-in because it changes agent behavior at session boundaries.** |
+| `secrets` | Secret hygiene scaffold: `.pre-commit-config.yaml` with `gitleaks` (pinned tag), a `.gitleaks.toml` allowlist, a CI scan workflow, and per-cloud docs in `docs/secrets/` (Vercel · Firebase · AWS · GCP · Azure Foundry → APIM → Gemini → Cosmos). **Opt-in because it changes commit-time behavior** (`git commit` is blocked when a secret is detected). |
 
 List them at runtime:
 
