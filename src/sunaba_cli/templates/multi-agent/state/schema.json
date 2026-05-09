@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "sunaba multi-agent shared task list",
+  "type": "object",
+  "required": ["version", "cohort", "tasks"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "cohort": {
+      "type": "object",
+      "required": ["id", "max_agents_env", "default_max_agents"],
+      "additionalProperties": false,
+      "properties": {
+        "id":                 { "type": "string", "minLength": 1 },
+        "max_agents_env":     { "type": "string", "minLength": 1 },
+        "default_max_agents": { "type": "integer", "minimum": 1, "maximum": 16 }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "status", "owns", "depends_on"],
+        "additionalProperties": false,
+        "properties": {
+          "id":          { "type": "string", "pattern": "^T[0-9]+$" },
+          "title":       { "type": "string", "minLength": 1 },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending", "claimed", "in_progress",
+              "blocked", "review", "completed", "failed"
+            ]
+          },
+          "claimed_by":  { "type": ["string", "null"] },
+          "agent_kind":  {
+            "type": ["string", "null"],
+            "enum": [null, "claude", "codex", "gemini", "human"]
+          },
+          "owns":        { "type": "array", "items": { "type": "string" } },
+          "depends_on":  { "type": "array", "items": { "type": "string" } },
+          "branch":      { "type": ["string", "null"] },
+          "worktree":    { "type": ["string", "null"] },
+          "started_at":  { "type": ["string", "null"] },
+          "updated_at":  { "type": ["string", "null"] },
+          "failure":     {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "required": ["kind", "detail"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind":        {
+                    "type": "string",
+                    "enum": [
+                      "overlap", "test_failure", "dependency_missing",
+                      "unclear_scope", "needs_owns_expansion", "other"
+                    ]
+                  },
+                  "detail":      { "type": "string" },
+                  "next_action": { "type": ["string", "null"] }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

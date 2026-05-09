@@ -1,0 +1,12 @@
+{
+  "_description": "Cooperative multi-agent orchestration: shared YAML task list at .agents/multi-agent/tasks.yaml, owns:-based conflict avoidance, hybrid resolution (overlap → serialize), default cohort cap 4 via SUNABA_MULTI_AGENT_MAX, sharding flowchart, lock-protected helper script (scripts/agent-task.py). Templates only — coordination is cooperative, not enforced. Recommended together with --stack autopilot for per-shard verifier + branch protection.",
+  "_files": {
+    ".agents/multi-agent/tasks.yaml":               "multi-agent/state/tasks.yaml",
+    ".agents/multi-agent/schema.json":              "multi-agent/state/schema.json",
+    ".agents/multi-agent/README.md":                "multi-agent/state/README.md",
+    "scripts/agent-task.py":                        "multi-agent/scripts/agent-task.py",
+    "docs/multi-agent/orchestration.md":            "multi-agent/docs/orchestration.md",
+    "docs/multi-agent/sharding.md":                 "multi-agent/docs/sharding.md",
+    "docs/multi-agent/subagent-prompt-template.md": "multi-agent/docs/subagent-prompt-template.md"
+  }
+}

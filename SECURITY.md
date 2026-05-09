@@ -109,3 +109,27 @@ Gemini CLI does not have a Stop-hook re-engage equivalent as of
 May 2026 — `--stack autopilot` is explicitly Claude- and
 Codex-CLI-shaped. See `docs/agents/gemini-autopilot-limitations.md`
 in any project that includes the stack.
+
+## Multi-agent
+
+`--stack multi-agent` ships a **cooperative** orchestration
+protocol — a shared YAML task list, an `owns:`-based ownership
+convention, and a `flock`-protected helper script for atomic
+claims. It does **not** enforce ownership; an agent that ignores
+the protocol can still overwrite another agent's work. The
+defense-in-depth is:
+
+1. The discipline injected into `AGENTS.md` / `CLAUDE.md` /
+   `GEMINI.md` (via stack-aware fragments).
+2. Physical isolation via `git worktree` per shard.
+3. The autopilot stack's branch protection (`.githooks/pre-push`)
+   and per-shard verifier with budget caps.
+4. A reviewer subagent (the autopilot stack's
+   `.claude/agents/reviewer.md`) reading `git diff` before merge.
+
+Multi-agent **multiplies token spend** by the cohort size. The
+cohort cap (`SUNABA_MULTI_AGENT_MAX`, default 4) is the primary
+guard against runaway cost. The default reflects the 2026
+industry consensus (4–8 concurrent worktrees per developer
+before resource pressure becomes the bottleneck); we ship the
+lower bound.
