@@ -1,0 +1,1 @@
+- **agents**: API keys for Claude / OpenAI / Gemini are injected via host env vars. Persistent CLI auth state lives in named volumes. Never paste keys into files.

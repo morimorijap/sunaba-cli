@@ -1,0 +1,1 @@
+- **python**: `uv` for dependencies, `uv run pytest -q` for tests, `uv run ruff check` for lint. See `docs/agents/python.md`.
