@@ -1,0 +1,3 @@
+- **`git worktree`** — physical isolation between shards (one worktree per task ID).
+- **`python scripts/agent-task.py`** — atomic `claim` / `start` / `complete` / `fail` / `block` / `check-owns` / `overlap` against the shared task list.
+- **autopilot verifier** (`bash .claude/hooks/verify.sh`) — runs per shard with `SUNABA_AUTOPILOT_MAX_*` budget caps.

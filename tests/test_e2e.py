@@ -369,6 +369,62 @@ def test_stack_aware_user_region_preserved_across_sync(tmp_path, isolated_regist
     assert "SENTINEL_42_PRESERVE_ME" in final
 
 
+# --- Multi-agent (Phase 5) E2E ---
+
+
+def test_sunaba_new_with_multi_agent_emits_full_structure(tmp_path, isolated_registry):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    r = _run(
+        ["new", "ma", "--stack", "python", "--stack", "multi-agent",
+         "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert r.returncode == 0, r.stderr
+    project = workspace / "ma"
+    # Coordination state
+    assert (project / ".agents" / "multi-agent" / "tasks.yaml").exists()
+    assert (project / ".agents" / "multi-agent" / "schema.json").exists()
+    assert (project / ".agents" / "multi-agent" / "README.md").exists()
+    # Helper script
+    assert (project / "scripts" / "agent-task.py").exists()
+    # Docs
+    assert (project / "docs" / "multi-agent" / "orchestration.md").exists()
+    assert (project / "docs" / "multi-agent" / "sharding.md").exists()
+    assert (
+        project / "docs" / "multi-agent" / "subagent-prompt-template.md"
+    ).exists()
+    # Stack-aware fragment landed in root AGENTS.md.
+    agents = (project / "AGENTS.md").read_text()
+    assert "multi-agent" in agents
+    assert "tasks.yaml" in agents
+
+
+def test_agent_task_help_runs(tmp_path, isolated_registry):
+    """The generated helper script must at least respond to --help.
+    Pure-function tests cover the rest; this one catches argparse
+    wiring regressions."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    r = _run(
+        ["new", "ah", "--stack", "multi-agent",
+         "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert r.returncode == 0, r.stderr
+    script = workspace / "ah" / "scripts" / "agent-task.py"
+    proc = subprocess.run(
+        [sys.executable, str(script), "--help"],
+        capture_output=True,
+        text=True,
+        cwd=str(workspace / "ah"),
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert "claim" in proc.stdout
+    assert "check-owns" in proc.stdout
+    assert "overlap" in proc.stdout
+
+
 # --- Rules + Autopilot (Phase 4) E2E ---
 
 

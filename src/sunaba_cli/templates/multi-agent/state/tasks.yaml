@@ -1,0 +1,20 @@
+version: 1
+cohort:
+  id: example
+  max_agents_env: SUNABA_MULTI_AGENT_MAX
+  default_max_agents: 4
+tasks:
+  - id: T001
+    title: Example task — refactor parser error handling
+    status: pending
+    claimed_by: null
+    agent_kind: null
+    owns:
+      - src/parser/**
+      - tests/parser/**
+    depends_on: []
+    branch: null
+    worktree: null
+    started_at: null
+    updated_at: null
+    failure: null

@@ -1,0 +1,1 @@
+- **multi-agent**: cooperative parallel orchestration via `.agents/multi-agent/tasks.yaml` + `owns:`-based conflict avoidance. Read [`docs/multi-agent/orchestration.md`](docs/multi-agent/orchestration.md) before parallel work.
