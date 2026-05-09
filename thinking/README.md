@@ -38,6 +38,12 @@ The bar for landing a doc here:
   caps, branch protection, subagent dispatch protocol, checkpoints).
   Codex CLI gets first-class subagent / hook templates alongside
   Claude; Gemini is the honest gap.
+- [`2026-05-09-multi-agent-orchestration/`](2026-05-09-multi-agent-orchestration/) —
+  cooperative parallel-agent coordination: shared YAML task list at
+  `.agents/multi-agent/tasks.yaml`, hybrid `owns:`-based conflict
+  avoidance, default cohort cap = 4, `flock`-protected helper script
+  for atomic claims, sharding flowchart that defaults to serial.
+  Templates only — coordination is cooperative, not enforced.
 
 ## Implementation order
 
