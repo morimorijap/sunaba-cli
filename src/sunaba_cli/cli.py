@@ -567,6 +567,13 @@ def _build_config_files(
     if mcp_template.exists():
         files[".mcp.json"] = mcp_template.read_text()
 
+    # Generic SECURITY.md scaffold. Emitted in both devcontainer and
+    # --no-devcontainer modes so every generated project has a
+    # vulnerability-report channel and an explicit scope statement.
+    security_template = TEMPLATES_DIR / "base" / "SECURITY.md"
+    if security_template.exists():
+        files["SECURITY.md"] = security_template.read_text()
+
     vscode_settings = (
         clean_config.get("customizations", {}).get("vscode", {}).get("settings", {})
     )
