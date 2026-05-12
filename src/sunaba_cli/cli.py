@@ -567,13 +567,6 @@ def _build_config_files(
     if mcp_template.exists():
         files[".mcp.json"] = mcp_template.read_text()
 
-    # Generic SECURITY.md scaffold. Emitted in both devcontainer and
-    # --no-devcontainer modes so every generated project has a
-    # vulnerability-report channel and an explicit scope statement.
-    security_template = TEMPLATES_DIR / "base" / "SECURITY.md"
-    if security_template.exists():
-        files["SECURITY.md"] = security_template.read_text()
-
     vscode_settings = (
         clean_config.get("customizations", {}).get("vscode", {}).get("settings", {})
     )
@@ -774,6 +767,14 @@ def new(
             click.echo(f"  Copied agent files: {', '.join(copied)}")
 
     (project_dir / ".gitignore").write_text(_default_gitignore())
+
+    # Generic SECURITY.md scaffold — written on project creation only.
+    # `sunaba rebuild` deliberately leaves it alone so user edits to the
+    # report channel, scope statement, etc. survive across rebuilds.
+    security_template = TEMPLATES_DIR / "base" / "SECURITY.md"
+    if security_template.exists():
+        (project_dir / "SECURITY.md").write_text(security_template.read_text())
+        click.echo("  Created SECURITY.md")
 
     register_project(name, project_dir, stacks)
 

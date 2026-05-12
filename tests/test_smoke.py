@@ -326,12 +326,15 @@ def test_no_devcontainer_keeps_host_agnostic_files():
     assert ".vscode/settings.json" in files
 
 
-def test_security_md_emitted_in_both_modes():
+def test_build_config_files_does_not_emit_security_md():
+    """SECURITY.md is `sunaba new`-only — not part of the regenerated set,
+    so `sunaba rebuild` cannot clobber user edits. The E2E suite covers
+    the actual emission on `new` and the preservation on `rebuild`.
+    """
     devc = _build_config_files("p", ["python"])
     host = _build_config_files("p", ["python"], no_devcontainer=True)
-    assert "SECURITY.md" in devc
-    assert "SECURITY.md" in host
-    assert "Reporting a Vulnerability" in devc["SECURITY.md"]
+    assert "SECURITY.md" not in devc
+    assert "SECURITY.md" not in host
 
 
 def test_no_devcontainer_dependabot_drops_devcontainer_ecosystems():
