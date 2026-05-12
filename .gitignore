@@ -10,3 +10,4 @@ build/
 .DS_Store
 .env
 .env.local
+.claude/settings.json
