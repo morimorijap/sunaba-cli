@@ -609,6 +609,44 @@ def test_rebuild_does_not_overwrite_gitignore(tmp_path, isolated_registry):
     assert "MY_CUSTOM_GITIGNORE_LINE" in final
 
 
+def test_sunaba_new_writes_security_md(tmp_path, isolated_registry):
+    """`sunaba new` writes a SECURITY.md from the base template."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    r = _run(
+        ["new", "sec", "--stack", "python", "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert r.returncode == 0, r.stderr
+    body = (workspace / "sec" / "SECURITY.md").read_text()
+    assert "Reporting a Vulnerability" in body
+    # The fixed template must not direct reporters to public Issues
+    # nor mention stack-specific (autopilot/multi-agent) sections.
+    assert "Open a normal GitHub issue" not in body
+    assert "Autonomy (`--stack autopilot`)" not in body
+    assert "Multi-agent (`--stack multi-agent`)" not in body
+
+
+def test_rebuild_does_not_overwrite_security_md(tmp_path, isolated_registry):
+    """User edits to `SECURITY.md` survive `sunaba rebuild` — the file is
+    written by `new` only, not by `_build_config_files`.
+    """
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    r1 = _run(
+        ["new", "secrb", "--stack", "python", "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert r1.returncode == 0, r1.stderr
+    project = workspace / "secrb"
+    (project / "SECURITY.md").write_text("# Custom security policy\nreport here\n")
+    r2 = _run(["rebuild", "secrb", "--add", "secrets", "--yes"], cwd=workspace)
+    assert r2.returncode == 0, f"stderr: {r2.stderr}\nstdout: {r2.stdout}"
+    assert (project / "SECURITY.md").read_text() == (
+        "# Custom security policy\nreport here\n"
+    )
+
+
 def test_legacy_static_mode_uses_verbatim_copy(tmp_path, isolated_registry):
     """Legacy projects without `agent_files` in registry default to static
     copy. We simulate this by manually rewriting the registry entry."""

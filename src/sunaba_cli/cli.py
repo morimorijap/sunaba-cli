@@ -768,6 +768,14 @@ def new(
 
     (project_dir / ".gitignore").write_text(_default_gitignore())
 
+    # Generic SECURITY.md scaffold — written on project creation only.
+    # `sunaba rebuild` deliberately leaves it alone so user edits to the
+    # report channel, scope statement, etc. survive across rebuilds.
+    security_template = TEMPLATES_DIR / "base" / "SECURITY.md"
+    if security_template.exists():
+        (project_dir / "SECURITY.md").write_text(security_template.read_text())
+        click.echo("  Created SECURITY.md")
+
     register_project(name, project_dir, stacks)
 
     mode_label = "host-only" if no_devcontainer else "devcontainer"
