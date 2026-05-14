@@ -126,7 +126,7 @@ sunaba stacks
 sunaba new api --stack python --stack agents
 
 # Full-stack Next.js + Neon Postgres
-sunaba new webapp --stack nextjs --stack neon --stack agents
+sunaba new apps --stack nextjs --stack neon --stack agents
 
 # Multi-cloud infra work
 sunaba new infra --stack python --stack aws --stack gcp --stack azure
