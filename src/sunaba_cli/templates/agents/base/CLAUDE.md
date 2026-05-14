@@ -13,16 +13,17 @@ Running inside a sunaba devcontainer sandbox.
 
 ## Recommended folder layout
 
-Layered, feature-first layout under the source root (`src/`/`lib/`/`app/`):
+Layered, feature-first split under the stack's source root (`src/`, `lib/`, package root):
 
-- `app/` — routes, theme, providers
+- `app/` — top-level wiring (routes, providers, entry points, themes)
 - `core/` — shared utilities, components, constants
-- `features/<name>/` — `data/` (API/repo), `domain/` (models), `presentation/` (UI)
-- `services/` — cross-cutting (notifications, SDKs)
+- `features/<name>/` — `data/` (I/O), `domain/` (models), presentation (`ui/`, `handlers/`)
+- `services/` — cross-cutting (notifications, SDK adapters)
 - `config/` — environment wiring (no secrets)
 
-Plural folder names. New work goes under `features/<name>/`, not `core/`.
-Route SDK calls through `data/` or `services/` so UI stays decoupled.
+Top-level folders are plural; feature names are singular (`features/auth/`).
+Isolate external SDK/API access in `data/` or `services/` so the rest stays decoupled.
+Treat this as a default — follow the stack's idiomatic layout when one already exists.
 
 ## Selected stacks
 
