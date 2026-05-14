@@ -11,6 +11,19 @@ in this repository.
 - Add or update tests for changed behavior.
 - Keep changes scoped to what was requested. No drive-by refactors.
 
+## Recommended folder layout
+
+Layered, feature-first layout under the source root (`src/`/`lib/`/`app/`):
+
+- `app/` — routes, theme, providers
+- `core/` — shared utilities, components, constants
+- `features/<name>/` — `data/` (API/repo), `domain/` (models), `presentation/` (UI)
+- `services/` — cross-cutting (notifications, SDKs)
+- `config/` — environment wiring (no secrets; see **Secrets**)
+
+Plural folder names. New work goes under `features/<name>/`, not `core/`.
+Route SDK calls through `data/` or `services/` so UI stays decoupled.
+
 ## Selected stacks
 
 <!-- SUNABA STACKS START -->

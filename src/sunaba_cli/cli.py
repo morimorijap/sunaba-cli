@@ -723,7 +723,7 @@ def new(
     Examples:
         sunaba new myapp                            # interactive stack picker
         sunaba new myapp --stack python             # explicit
-        sunaba new webapp --stack nextjs --stack aws
+        sunaba new apps --stack nextjs --stack aws
         sunaba new headless --no-prompt             # script-safe, defaults to python
         sunaba new local --stack python --no-devcontainer   # host-only, skip devcontainer
     """

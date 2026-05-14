@@ -11,6 +11,19 @@ Running inside a sunaba devcontainer sandbox.
 - Run tests before marking a task complete.
 - Use absolute paths for file operations when crossing directories.
 
+## Recommended folder layout
+
+Layered, feature-first layout under the source root (`src/`/`lib/`/`app/`):
+
+- `app/` — routes, theme, providers
+- `core/` — shared utilities, components, constants
+- `features/<name>/` — `data/` (API/repo), `domain/` (models), `presentation/` (UI)
+- `services/` — cross-cutting (notifications, SDKs)
+- `config/` — environment wiring (no secrets)
+
+Plural folder names. New work goes under `features/<name>/`, not `core/`.
+Route SDK calls through `data/` or `services/` so UI stays decoupled.
+
 ## Selected stacks
 
 <!-- SUNABA STACKS START -->
