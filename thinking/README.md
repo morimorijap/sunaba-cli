@@ -44,6 +44,14 @@ The bar for landing a doc here:
   avoidance, default cohort cap = 4, `flock`-protected helper script
   for atomic claims, sharding flowchart that defaults to serial.
   Templates only — coordination is cooperative, not enforced.
+- [`2026-05-22-e2e-evidence-artifacts/`](2026-05-22-e2e-evidence-artifacts/) —
+  making agent-driven browser verification a durable, committed
+  artifact: a dated `evidence/e2e/YYYY-MM-DD-<slug>/` run folder with
+  curated screenshots and a schema'd `README.md` run report. Folds
+  into the existing `playwright` stack, adds the missing `playwright`
+  agent fragment, wires the Playwright MCP `--output-dir` to a
+  gitignored scratch path, and caps committed PNGs by curation +
+  retention. Cooperative convention — templates only.
 
 ## Implementation order
 
