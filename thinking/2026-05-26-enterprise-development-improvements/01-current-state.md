@@ -59,9 +59,9 @@ These are the candidate improvement axes — not yet decisions.
 
 1. **Length / signal density.** 557 lines, top-to-bottom prose,
    no TL;DR. A reader who only has five minutes cannot extract
-   the decisions. Other docs in `thinking/` (see
-   [`2026-05-22-e2e-evidence-artifacts/README.md`](../2026-05-22-e2e-evidence-artifacts/README.md))
-   lead with a "decisions in brief" block.
+   the decisions. Other docs in `thinking/` (e.g.
+   `2026-05-22-e2e-evidence-artifacts/README.md`, currently on a
+   sibling branch in PR #22) lead with a "decisions in brief" block.
 
 2. **Redundancy across sections.**
    §4.4 ("`AGENT.md` is a TOC, not a giant rulebook") and §8.2

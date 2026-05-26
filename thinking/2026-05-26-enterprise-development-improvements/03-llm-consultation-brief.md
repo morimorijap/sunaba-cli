@@ -627,7 +627,7 @@ Examples of docs in this repo that meet the bar:
 
 - [`2026-05-09-stack-aware-agent-files/`](../2026-05-09-stack-aware-agent-files/)
 - [`2026-05-09-multi-agent-orchestration/`](../2026-05-09-multi-agent-orchestration/)
-- [`2026-05-22-e2e-evidence-artifacts/`](../2026-05-22-e2e-evidence-artifacts/)
+- `2026-05-22-e2e-evidence-artifacts/` (sibling branch, PR #22)
 
 Each ends with a TL;DR block, a "considered and rejected"
 section, and per-file citations. The essay under review does
@@ -726,7 +726,7 @@ sunaba already ships:
 - `--stack secrets` — `gitleaks`, per-cloud secret-proxy docs
 - `--stack multi-agent` — cooperative parallel-agent task list
 - The forthcoming `evidence/e2e/` convention
-  ([proposal](../2026-05-22-e2e-evidence-artifacts/05-proposal.md))
+  (proposal under review in `2026-05-22-e2e-evidence-artifacts/` on a sibling branch, PR #22)
 - Per-stack `AGENTS.md` / `CLAUDE.md` / `GEMINI.md` fragments
   ([proposal](../2026-05-09-stack-aware-agent-files/05-proposal.md))
 

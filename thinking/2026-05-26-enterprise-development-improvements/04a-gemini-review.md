@@ -8,8 +8,8 @@
 > headless invocation — fixed with `--skip-trust` +
 > `GEMINI_CLI_TRUST_WORKSPACE=true`). The second attempt hit
 > `gemini-3-flash-preview` quota throttling three times and then
-> succeeded — the same availability pattern Codex review
-> [`2026-05-22-e2e-evidence-artifacts/04a`](../2026-05-22-e2e-evidence-artifacts/04a-gemini-review.md)
+> succeeded — the same availability pattern the prior
+> `2026-05-22-e2e-evidence-artifacts/` consultation (sibling branch, PR #22)
 > also observed.
 >
 > Output reproduced verbatim below. Maintainers' synthesis lives in

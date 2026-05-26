@@ -67,8 +67,8 @@ the choice and the reason.
 5. **Replace** §5's prose phase table with a five-column
    *checklist matrix*, and §9's prose docs table with a
    `docs/` skeleton — with four new rows
-   (`agent-security.md`, `data-classification.md`,
-   `observability.md`, `evals.md`).
+   (`security/agent-security.md`, `data/classification.md`,
+   `operations/observability.md`, `testing/evals.md`).
 6. **Expand §6 Quality Gates** with three new gates:
    evals, agent-security / tool-scope review, and
    observability / committed traces.

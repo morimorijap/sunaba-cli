@@ -137,10 +137,10 @@ The brief asked the reviewers to choose between three options
 (fix the arrows / replace wholesale / cut entirely). Both picked
 "replace wholesale," and both produced Mermaid sources. The
 proposal adopts **Codex's four-loop diagram** as the base, with
-two small additions from Gemini's version: the explicit
-human-decision node and the bidirectional `<==>` style for
-intra-loop edges (so the visual difference between "AI assists"
-and "humans decide" is unmistakable).
+one small addition from Gemini's version: an explicit
+human-decision node (using emphasized `==>` edges so the visual
+difference between "AI assists" and "humans decide" is
+unmistakable).
 
 Why Codex's over Gemini's: Codex's diagram preserves the original
 essay's content (the eight boxes from `A` through `H` survive as
@@ -353,16 +353,17 @@ link to `security/agent-security.md` in the skeleton.
 
 ### 7.3 Observability for agent work
 
-Adopted verbatim from Codex's §H.3, with Gemini's wording added
-to the trace-types list:
+Adapted from Codex's §H.3, with one proposal-side addition (the
+"linked/committed where the project convention requires it" line,
+not in either review):
 
 > For enterprise use, the agent's work must be auditable: prompt,
 > selected context, tool calls, file diffs, test results,
 > approvals, and deployment evidence should be retained according
-> to policy. Agent traces are review and incident artefacts —
-> like `claudedocs/traces/` or
-> [`evidence/e2e/`](../2026-05-22-e2e-evidence-artifacts/05-proposal.md),
-> they are committed alongside the code change.
+> to policy. Agent traces are review and incident artefacts — like
+> `claudedocs/traces/` or the proposed `evidence/e2e/` artefact
+> (see `2026-05-22-e2e-evidence-artifacts/`, PR #22), they are
+> linked or committed where the project convention requires it.
 > ([OpenAI Agents SDK tracing](https://github.com/openai/openai-agents-python/blob/main/docs/tracing.md))
 
 Quality-gate impact: tie this to the `--stack harness`
@@ -381,9 +382,10 @@ project-agnostic; a separate companion document does the mapping.
 (or, if it grows past one page,
 `docs/agents/enterprise.md` in the main project).
 
-**What it contains:** the Codex-supplied mapping table verbatim,
-plus per-row links to the relevant `--stack` proposal in
-`thinking/`.
+**What it contains:** a mapping table **adapted from** Codex's
+§F (expanded with one row for path-scoped rules and reshaped to
+add per-row links to the relevant `--stack` proposal in
+`thinking/`).
 
 | Essay principle | sunaba mechanism |
 |---|---|
@@ -393,7 +395,7 @@ plus per-row links to the relevant `--stack` proposal in
 | Verifier / planner roles (§6) | `--stack harness` — see [`2026-05-09-harness-engineering/`](../2026-05-09-harness-engineering/) |
 | Stop-hook budgets & branch protection (§6) | `--stack autopilot` |
 | Secrets & cloud access (§7.2) | `--stack secrets` |
-| Evidence artefacts (§7.3) | `evidence/e2e/` — see [`2026-05-22-e2e-evidence-artifacts/`](../2026-05-22-e2e-evidence-artifacts/) |
+| Evidence artefacts (§7.3) | `evidence/e2e/` — see `2026-05-22-e2e-evidence-artifacts/` (sibling branch, PR #22) |
 
 This is intentionally **a separate doc**, not a final section of
 the essay. The essay's principles outlive sunaba's current flag
