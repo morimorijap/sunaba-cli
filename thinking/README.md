@@ -44,6 +44,24 @@ The bar for landing a doc here:
   avoidance, default cohort cap = 4, `flock`-protected helper script
   for atomic claims, sharding flowchart that defaults to serial.
   Templates only — coordination is cooperative, not enforced.
+- [`2026-05-26-enterprise-development/`](2026-05-26-enterprise-development/) —
+  a standalone Japanese essay on doing large-scale enterprise
+  system development under AI-driven coding agents. Ships an
+  `AGENT.md` skeleton, a task-handoff template, a quality-gate
+  pipeline diagram, and a 16-row "minimum documents" list. Now
+  under review (see next entry).
+- [`2026-05-26-enterprise-development-improvements/`](2026-05-26-enterprise-development-improvements/) —
+  second-pass review of the essay above. Codex `gpt-5.5` and
+  Gemini `gemini-3-flash-preview` converge on eight decisions:
+  reframe the thesis to "context architecture + verification
+  architecture", replace §2's waterfall flowchart with a
+  four-loop lifecycle, consolidate the three layered-context
+  sections into one, add eight inline citations, replace both
+  prose tables with a checklist matrix + a `docs/` skeleton,
+  add three new quality gates (evals, agent security, agent
+  observability), keep the essay project-agnostic with a
+  separate sunaba-mapping companion, and translate to English
+  with a Japanese mirror.
 
 ## Implementation order
 
