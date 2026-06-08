@@ -30,20 +30,18 @@ Treat this as a default — follow the stack's idiomatic layout when one already
 <!-- SUNABA STACKS START -->
 <!-- SUNABA STACKS END -->
 
-## Calling Gemini via MCP
+## Delegating to the Antigravity CLI (`agy`)
 
-When delegating to the `gemini-cli` MCP server, prefer the latest
-preview model by passing the `model` parameter explicitly:
+Gemini CLI has been folded into the **Antigravity CLI** (`agy`). It is not
+an MCP server, so delegate to it headlessly via Bash:
 
 ```
-mcp__gemini-cli__chat({
-  "prompt": "...",
-  "model": "gemini-3.1-pro-preview"
-})
+agy -p "<your prompt>" --model "Gemini 3.1 Pro (High)"
 ```
 
-Fallbacks if `gemini-3.1-pro-preview` is unavailable on your account:
-`gemini-3-pro-preview` → `gemini-2.5-pro` (default).
+Pick a model from `agy models`. Good defaults: `Gemini 3.1 Pro (High)` for
+hard reasoning, `Gemini 3.5 Flash (High)` for fast turns. Verify the binary
+is on PATH with `command -v agy` first.
 
 <!-- SUNABA USER START -->
 <!-- Edit freely below. `sunaba sync` preserves anything between the USER markers. -->

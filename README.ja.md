@@ -9,7 +9,7 @@
 「砂場」(sunaba) のように、壊してもすぐ作り直せる隔離環境で
 [Claude Code](https://claude.com/claude-code) /
 [OpenAI Codex CLI](https://github.com/openai/codex) /
-[Gemini CLI](https://github.com/google-gemini/gemini-cli) を同時に動かせます。
+[Antigravity CLI](https://antigravity.google)(`agy`、Gemini CLI の後継) を同時に動かせます。
 MCP サーバー、クラウド SDK、エージェント指示ファイルまで揃った状態で起動します。
 
 ---
@@ -23,7 +23,7 @@ MCP 経由で互いに通信できる状態で起動します。
 
 - 🧪 **使い捨て** — エージェントが壊しても作り直せる
 - 🔌 **合成可能** — スタックを組み合わせ (`python`, `nextjs`, `aws`, `gcp` …)
-- 🤖 **エージェント相互連携** — Claude Code が MCP 経由で Codex / Gemini を呼べる
+- 🤖 **エージェント相互連携** — Claude Code が MCP 経由で Codex を、`agy -p` で Antigravity CLI を呼べる
 - 🔐 **秘密情報は opt-in** — API キーは `--stack agents` を指定したときだけ注入
 - 📦 **自己完結** — `uv tool install` でグローバル `sunaba` コマンド化
 
@@ -71,11 +71,11 @@ sunaba new local --stack python --no-devcontainer
 
 `.devcontainer/devcontainer.json` と `bootstrap.sh` の生成をスキップし、ホストでも
 そのまま使えるファイル群 (`.mcp.json`、`.vscode/settings.json`、エージェント指示
-ファイル `CLAUDE.md` / `GEMINI.md` / `AGENTS.md` / `skills.md`、`devcontainers` /
+ファイル `CLAUDE.md` / `AGENTS.md` / `skills.md`、`devcontainers` /
 `docker` を除いた `dependabot.yml`、`.gitignore`) のみを出力します。
 
 作成後、`sunaba` は `PATH` を確認し、不足しているコマンド (エージェント CLI
-`claude` / `codex` / `gemini`、MCP ランタイム `npx` / `uvx`、stack 依存ツール
+`claude` / `codex` / `agy`、MCP ランタイム `npx` / `uvx`、stack 依存ツール
 `uv` / `aws` / `gcloud` / `az` / `neonctl` / `vercel` 等) を警告として
 表示します。表示されたものをホスト側で手動インストールしてください。
 
@@ -107,7 +107,7 @@ sunaba new local --stack python --no-devcontainer
 | `harness` | Claude Code 向け harness テンプレート: `.claude/settings.json` (permissions + Stop hook)、silent-on-success な `verify.sh`、オンデマンド skill、planner / reviewer / verifier 役割定義、60行以内の ratchet `AGENTS.md`、`claudedocs/` トレースディレクトリ。**セッション境界での agent 挙動が変わるため opt-in。** |
 | `secrets` | Secret 漏洩防止スキャフォールド: `gitleaks` を固定 tag で pin した `.pre-commit-config.yaml`、`.gitleaks.toml` allowlist、CI scan workflow、`docs/secrets/` 配下のクラウド別ドキュメント (Vercel · Firebase · AWS · GCP · Azure Foundry → APIM → Gemini → Cosmos)。**コミット時挙動が変わる(検知時は `git commit` がブロック)ため opt-in。** |
 | `rules` | パススコープ付きルールを複数ターゲットに展開。`templates/rules/` のキャノニカル source 1 ファイルから `.cursor/rules/<name>.mdc`(Cursor の `globs:` / `alwaysApply:`)、`.claude/rules/<name>.md`(Claude の `paths:`)、`docs/agents/rules/<name>.md`(Codex / Gemini フォールバック)を生成。低リスクなコンテキスト改善で、ランタイム挙動は変わりません。 |
-| `autopilot` | Claude Code / Codex CLI 向けの opt-in な自走環境: budget cap (`SUNABA_AUTOPILOT_MAX_ITERS` / `_MINUTES` / `_CHANGED_FILES`)付き構造化 Stop hook 再起動、`.githooks/pre-push` によるブランチ保護、operational な planner / reviewer / verifier 役割定義(Claude `.claude/agents/*.md` + Codex `.codex/agents/*.toml`)、subagent dispatch protocol ドキュメント、`claudedocs/{plans,checkpoints}/`。**agent ランタイム挙動が変わる**(verifier 失敗時 Stop hook が再起動)。推奨呼び出し: `--stack harness --stack rules --stack autopilot` の順(autopilot の operational 役割定義が harness の seed を上書きするため)。Gemini CLI は honest gap として `docs/agents/gemini-autopilot-limitations.md` で扱う。 |
+| `autopilot` | Claude Code / Codex CLI 向けの opt-in な自走環境: budget cap (`SUNABA_AUTOPILOT_MAX_ITERS` / `_MINUTES` / `_CHANGED_FILES`)付き構造化 Stop hook 再起動、`.githooks/pre-push` によるブランチ保護、operational な planner / reviewer / verifier 役割定義(Claude `.claude/agents/*.md` + Codex `.codex/agents/*.toml`)、subagent dispatch protocol ドキュメント、`claudedocs/{plans,checkpoints}/`。**agent ランタイム挙動が変わる**(verifier 失敗時 Stop hook が再起動)。推奨呼び出し: `--stack harness --stack rules --stack autopilot` の順(autopilot の operational 役割定義が harness の seed を上書きするため)。Antigravity CLI(`agy`)の対応状況と注意点は `docs/agents/antigravity-autopilot.md` で扱う。 |
 | `multi-agent` | 並列エージェント協調オーケストレーション: `.agents/multi-agent/tasks.yaml` で `schema.json` 検証された共有タスクリスト、`owns:` ベースの hybrid 衝突回避(重複 → orchestrator が直列化)、デフォルト cohort cap 4(`SUNABA_MULTI_AGENT_MAX`)、`docs/multi-agent/sharding.md` の sharding フローチャート、`flock` 保護ヘルパースクリプト(`scripts/agent-task.py` の `claim` / `start` / `complete` / `fail` / `block` / `check-owns` / `overlap` サブコマンド)、scoped subagent プロンプトテンプレート。テンプレートのみ — 協調は **cooperative, not enforced**(ヘルパーが正しい操作を最も簡単にする;defense-in-depth は per-shard `git worktree` + autopilot のブランチ保護 + reviewer subagent)。`--stack autopilot` との併用推奨。 |
 
 ## セキュリティについて (必読)
@@ -129,7 +129,7 @@ sunaba new local --stack python --no-devcontainer
 
 ### `sunaba-cli` が守れないもの
 
-- **`@latest` のエージェント CLI**: Claude Code / Codex / Gemini CLI は初回起動時に
+- **`@latest` のエージェント CLI**: Claude Code / Codex は `@latest`、Antigravity CLI(`agy`)は公式インストーラで初回起動時に
   `@latest` でインストールされます。常に最新にする代わりに、上流が侵害されれば
   sandbox も影響を受けます。再現性が必要なら fork して固定してください。
 - **MCP サーバーの supply chain**: `playwright` / `chrome-devtools-mcp` /
@@ -219,7 +219,7 @@ git push                   # SSH 経由で push できる
   harness engineering 観点を生成テンプレートに反映。`--stack harness`
   と、後続提案の基盤になる `_files` テンプレート出力機構を導入。
 - [`thinking/2026-05-09-stack-aware-agent-files/`](thinking/2026-05-09-stack-aware-agent-files/) —
-  生成される `AGENTS.md` / `CLAUDE.md` / `GEMINI.md` / `skills.md` を
+  生成される `AGENTS.md` / `CLAUDE.md` / `skills.md` を
   選択された stack に応じて差し替える。stack 別 fragment と、
   registry flag による opt-in な sync モードを追加。
 - [`thinking/2026-05-09-secrets-management/`](thinking/2026-05-09-secrets-management/) —

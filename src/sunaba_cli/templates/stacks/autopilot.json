@@ -1,5 +1,5 @@
 {
-  "_description": "Opt-in autonomous environment: structured Stop-hook re-engage with budget caps, branch protection, subagent dispatch protocol, checkpoints. First-class templates for Claude AND Codex CLI. Gemini documented as honest gap. Recommends --stack harness and --stack rules in front of it.",
+  "_description": "Opt-in autonomous environment: structured Stop-hook re-engage with budget caps, branch protection, subagent dispatch protocol, checkpoints. First-class templates for Claude AND Codex CLI. Antigravity CLI (agy) status/caveats documented. Recommends --stack harness and --stack rules in front of it.",
   "_files": {
     ".claude/hooks/verify.sh":                      "autopilot/claude/hooks/verify.sh",
     ".claude/agents/planner.md":                    "autopilot/claude/agents/planner.md",
@@ -15,7 +15,7 @@
     "claudedocs/plans/.gitkeep":                    "autopilot/claudedocs/plans/.gitkeep",
     "claudedocs/checkpoints/.gitkeep":              "autopilot/claudedocs/checkpoints/.gitkeep",
     "docs/agents/subagent-dispatch.md":             "autopilot/docs/subagent-dispatch.md",
-    "docs/agents/gemini-autopilot-limitations.md":  "autopilot/docs/gemini-autopilot-limitations.md",
+    "docs/agents/antigravity-autopilot.md":         "autopilot/docs/antigravity-autopilot.md",
     ".sunaba/autopilot/.gitignore":                 "autopilot/state/.gitignore"
   },
   "_bootstrap": [

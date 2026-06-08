@@ -1,7 +1,7 @@
 [project]
 name = "sunaba-cli"
 version = "0.2.2"
-description = "One-command devcontainer sandbox for AI agent development (Claude Code / Codex / Gemini CLI)"
+description = "One-command devcontainer sandbox for AI agent development (Claude Code / Codex / Antigravity CLI)"
 requires-python = ">=3.11"
 dependencies = [
     "click>=8.1",
@@ -9,7 +9,7 @@ dependencies = [
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "morimorijap" }]
-keywords = ["devcontainer", "sandbox", "ai-agents", "claude-code", "codex", "gemini-cli"]
+keywords = ["devcontainer", "sandbox", "ai-agents", "claude-code", "codex", "antigravity-cli", "agy"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
@@ -37,9 +37,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/sunaba_cli"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"src/sunaba_cli/templates" = "sunaba_cli/templates"
 
 [dependency-groups]
 dev = [

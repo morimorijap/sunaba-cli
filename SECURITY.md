@@ -28,7 +28,7 @@ high-severity issues within two weeks.
 ### Out of scope
 
 - Vulnerabilities in upstream AI agent CLIs (`@anthropic-ai/claude-code`,
-  `@openai/codex`, `@google/gemini-cli`) — please report those to the
+  `@openai/codex`, Google Antigravity CLI / `agy`) — please report those to the
   respective projects.
 - Vulnerabilities in MCP servers fetched via `npx` / `uvx`.
 - Vulnerabilities in the base devcontainer image
@@ -44,7 +44,8 @@ container start:
 
 - `@anthropic-ai/claude-code`
 - `@openai/codex`
-- `@google/gemini-cli`
+- Antigravity CLI (`agy`) — via the official `antigravity.google` installer
+  (`curl … | bash`), which fetches the latest release
 - `vercel` (with `--stack nextjs`)
 - `neonctl` (with `--stack neon`)
 
@@ -105,9 +106,10 @@ to `main` / `master`; it does not prevent `git push` to a feature
 branch on a public remote. Treat the autopilot stack as
 production-affecting if the project's remote is public.
 
-Gemini CLI does not have a Stop-hook re-engage equivalent as of
-May 2026 — `--stack autopilot` is explicitly Claude- and
-Codex-CLI-shaped. See `docs/agents/gemini-autopilot-limitations.md`
+The Antigravity CLI (`agy`, successor to Gemini CLI) ships hooks and
+subagents, but its headless Stop-hook re-engage wiring is not yet
+templated or verified here — `--stack autopilot` is explicitly Claude-
+and Codex-CLI-shaped. See `docs/agents/antigravity-autopilot.md`
 in any project that includes the stack.
 
 ## Multi-agent
@@ -119,8 +121,8 @@ claims. It does **not** enforce ownership; an agent that ignores
 the protocol can still overwrite another agent's work. The
 defense-in-depth is:
 
-1. The discipline injected into `AGENTS.md` / `CLAUDE.md` /
-   `GEMINI.md` (via stack-aware fragments).
+1. The discipline injected into `AGENTS.md` / `CLAUDE.md`
+   (via stack-aware fragments).
 2. Physical isolation via `git worktree` per shard.
 3. The autopilot stack's branch protection (`.githooks/pre-push`)
    and per-shard verifier with budget caps.

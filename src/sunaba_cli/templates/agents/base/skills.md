@@ -5,8 +5,9 @@
 - **gh**: GitHub CLI for PR / issue management.
 - **claude**: Claude Code AI assistant.
 - **codex**: OpenAI Codex agent.
-- **gemini**: Google Gemini CLI agent (MCP: pass
-  `model: "gemini-3.1-pro-preview"` for the preview Pro model).
+- **agy**: Antigravity CLI agent (formerly Gemini CLI; multi-model —
+  Gemini 3.x, Claude, GPT-OSS). Headless:
+  `agy -p "..." --model "Gemini 3.1 Pro (High)"`.
 
 ## Stack tools
 

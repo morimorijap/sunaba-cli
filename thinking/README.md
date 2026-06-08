@@ -52,6 +52,33 @@ The bar for landing a doc here:
   agent fragment, wires the Playwright MCP `--output-dir` to a
   gitignored scratch path, and caps committed PNGs by curation +
   retention. Cooperative convention — templates only.
+- [`2026-05-26-enterprise-development/`](2026-05-26-enterprise-development/) —
+  a standalone Japanese essay on doing large-scale enterprise
+  system development under AI-driven coding agents. Ships an
+  `AGENT.md` skeleton, a task-handoff template, a quality-gate
+  pipeline diagram, and a 16-row "minimum documents" list. Now
+  under review (see next entry).
+- [`2026-05-26-enterprise-development-improvements/`](2026-05-26-enterprise-development-improvements/) —
+  second-pass review of the essay above. Codex `gpt-5.5` and
+  Gemini `gemini-3-flash-preview` converge on eight decisions:
+  reframe the thesis to "context architecture + verification
+  architecture", replace §2's waterfall flowchart with a
+  four-loop lifecycle, consolidate the three layered-context
+  sections into one, add eight inline citations, replace both
+  prose tables with a checklist matrix + a `docs/` skeleton,
+  add three new quality gates (evals, agent security, agent
+  observability), keep the essay project-agnostic with a
+  separate sunaba-mapping companion, and translate to English
+  with a Japanese mirror.
+- [`2026-06-07-antigravity-cli-migration/`](2026-06-07-antigravity-cli-migration/) —
+  migrating the scaffold's Gemini CLI integration to Google's
+  **Antigravity CLI** (`agy`, the Gemini CLI successor; Gemini CLI
+  stops serving on 2026-06-18). Codex `gpt-5.5` and Gemini
+  `gemini-3-flash-preview` concur: stop generating `GEMINI.md`
+  (agy reads `AGENTS.md`), keep the internal `"gemini"` token for
+  back-compat, delegate to agy via headless `agy -p`, swap the
+  bootstrap installer, drop the `gemini-cli` MCP server, and rewrite
+  the autopilot doc as status-and-caveats. Implemented + tested.
 
 ## Implementation order
 

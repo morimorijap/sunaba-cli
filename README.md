@@ -9,10 +9,10 @@
 
 `sunaba` (Japanese for "sandbox") scaffolds isolated, disposable devcontainer
 environments pre-wired for [Claude Code](https://claude.com/claude-code),
-[OpenAI Codex CLI](https://github.com/openai/codex), and
-[Google Gemini CLI](https://github.com/google-gemini/gemini-cli) — plus MCP
-servers, cloud SDKs, and project scaffolding. Break it, throw it away, make
-another one.
+[OpenAI Codex CLI](https://github.com/openai/codex), and the
+[Google Antigravity CLI](https://antigravity.google) (`agy`, the successor to
+Gemini CLI) — plus MCP servers, cloud SDKs, and project scaffolding. Break it,
+throw it away, make another one.
 
 ---
 
@@ -25,7 +25,7 @@ agents pre-installed and pre-configured to talk to each other via MCP.
 
 - 🧪 **Disposable** — if an agent breaks something, rebuild the container
 - 🔌 **Composable** — mix and match stacks (`python`, `nextjs`, `aws`, `gcp`, …)
-- 🤖 **Agents talk to each other** — Claude Code can call Codex and Gemini as MCP sub-agents
+- 🤖 **Agents talk to each other** — Claude Code can call Codex as an MCP sub-agent, and the Antigravity CLI (`agy`) headlessly
 - 🔐 **Opt-in secrets** — API keys only injected when you ask for them (`--stack agents`)
 - 📦 **Self-contained** — `uv tool install` gives you a global `sunaba` command
 
@@ -73,12 +73,12 @@ sunaba new local --stack python --no-devcontainer
 
 This skips `.devcontainer/devcontainer.json` and `bootstrap.sh` and emits
 only the host-portable pieces: `.mcp.json`, `.vscode/settings.json`, agent
-instruction files (`CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `skills.md`), a
+instruction files (`CLAUDE.md`, `AGENTS.md`, `skills.md`), a
 filtered `dependabot.yml` (no `devcontainers` / `docker` ecosystems), and
 `.gitignore`.
 
 After creation, `sunaba` checks your `PATH` and warns about any required
-host commands that are missing — agent CLIs (`claude`, `codex`, `gemini`),
+host commands that are missing — agent CLIs (`claude`, `codex`, `agy`),
 the MCP runtime (`npx`, `uvx`), and stack-specific tools (e.g. `uv`, `aws`,
 `gcloud`, `az`, `neonctl`, `vercel`). Install whatever is reported missing.
 
@@ -110,7 +110,7 @@ the MCP runtime (`npx`, `uvx`), and stack-specific tools (e.g. `uv`, `aws`,
 | `harness` | Claude Code-oriented harness templates: `.claude/settings.json` (permissions + Stop hook), a silent-on-success `verify.sh`, on-demand skills, planner / reviewer / verifier sub-agent role files, a 60-line ratchet `AGENTS.md`, and a `claudedocs/` trace directory. **Opt-in because it changes agent behavior at session boundaries.** |
 | `secrets` | Secret hygiene scaffold: `.pre-commit-config.yaml` with `gitleaks` (pinned tag), a `.gitleaks.toml` allowlist, a CI scan workflow, and per-cloud docs in `docs/secrets/` (Vercel · Firebase · AWS · GCP · Azure Foundry → APIM → Gemini → Cosmos). **Opt-in because it changes commit-time behavior** (`git commit` is blocked when a secret is detected). |
 | `rules` | Multi-target path-scoped rule files. One canonical source under `templates/rules/` renders to `.cursor/rules/<name>.mdc` (Cursor `globs:` / `alwaysApply:`), `.claude/rules/<name>.md` (Claude `paths:`), and `docs/agents/rules/<name>.md` (Codex / Gemini fallback). Low-risk context improvement; no runtime behavior change. |
-| `autopilot` | Opt-in autonomous environment for Claude Code and Codex CLI: structured Stop-hook re-engage with budget caps (`SUNABA_AUTOPILOT_MAX_ITERS` / `_MINUTES` / `_CHANGED_FILES`), branch protection via `.githooks/pre-push`, operational planner / reviewer / verifier role files (Claude `.claude/agents/*.md` + Codex `.codex/agents/*.toml`), a subagent dispatch protocol document, `claudedocs/{plans,checkpoints}/`. **Changes agent runtime behavior** (Stop hook re-engages on verifier failure). Recommended invocation: `--stack harness --stack rules --stack autopilot` in that order so autopilot's operational role files override harness's seeds. Gemini CLI is documented as an honest gap — see `docs/agents/gemini-autopilot-limitations.md`. |
+| `autopilot` | Opt-in autonomous environment for Claude Code and Codex CLI: structured Stop-hook re-engage with budget caps (`SUNABA_AUTOPILOT_MAX_ITERS` / `_MINUTES` / `_CHANGED_FILES`), branch protection via `.githooks/pre-push`, operational planner / reviewer / verifier role files (Claude `.claude/agents/*.md` + Codex `.codex/agents/*.toml`), a subagent dispatch protocol document, `claudedocs/{plans,checkpoints}/`. **Changes agent runtime behavior** (Stop hook re-engages on verifier failure). Recommended invocation: `--stack harness --stack rules --stack autopilot` in that order so autopilot's operational role files override harness's seeds. Antigravity CLI (`agy`) status & caveats are documented — see `docs/agents/antigravity-autopilot.md`. |
 | `multi-agent` | Cooperative parallel-agent orchestration: shared YAML task list at `.agents/multi-agent/tasks.yaml` validated by `schema.json`, `owns:`-based hybrid conflict avoidance (overlapping `owns:` → orchestrator serializes), default cohort cap 4 via `SUNABA_MULTI_AGENT_MAX`, sharding flowchart in `docs/multi-agent/sharding.md`, `flock`-protected helper script (`scripts/agent-task.py`) with `claim` / `start` / `complete` / `fail` / `block` / `check-owns` / `overlap` subcommands, scoped subagent prompt template. Templates only — coordination is **cooperative, not enforced** (the helper makes the right thing easy; defense-in-depth is `git worktree` per shard + autopilot's branch protection + reviewer subagent). Recommended together with `--stack autopilot`. |
 
 List them at runtime:
@@ -191,7 +191,6 @@ myapp/
 ├── .gitignore
 ├── AGENTS.md                  # Shared agent instructions
 ├── CLAUDE.md                  # Claude-specific instructions
-├── GEMINI.md                  # Gemini-specific instructions
 └── skills.md                  # Tool catalog for agents
 ```
 
@@ -202,7 +201,6 @@ Generated projects ship with a `.mcp.json` that lets Claude Code call:
 | Server | Purpose |
 |---|---|
 | `codex` | OpenAI Codex CLI (sub-agent) |
-| `gemini-cli` | Google Gemini CLI (sub-agent) |
 | `playwright` | Browser automation / E2E tests |
 | `chrome-devtools` | Chrome DevTools protocol |
 | `notebooklm` | NotebookLM CLI |
@@ -223,7 +221,7 @@ Every generated project starts from:
 - **Node.js 22** (powers `npx` + MCP servers)
 - **Claude Code** (`claude`) — `@latest`
 - **OpenAI Codex** (`codex`) — `@latest`
-- **Gemini CLI** (`gemini`) — `@latest`
+- **Antigravity CLI** (`agy`, formerly Gemini CLI) — official installer
 - VS Code extensions: Claude Code, ChatGPT, Markdown Preview Enhanced, Rainbow CSV
 - VS Code file-watcher exclusions (`node_modules`, `.venv`, `__pycache__`, …)
 
@@ -251,8 +249,9 @@ before using `sunaba-cli` on sensitive work.
 
 ### What `sunaba-cli` does NOT protect you from
 
-- **`@latest` agent CLIs**: Claude Code, Codex, and Gemini CLI are installed
-  with `@latest` on every first container start. This is an intentional
+- **`@latest` agent CLIs**: Claude Code and Codex are installed with `@latest`,
+  and the Antigravity CLI (`agy`) via its official installer, on every first
+  container start. This is an intentional
   tradeoff — the alternative is stale agents. If upstream is compromised, so
   is your sandbox. Fork and pin if you need deterministic builds.
 - **MCP server supply chain**: `playwright`, `chrome-devtools-mcp`, and
@@ -359,7 +358,7 @@ Drafts in flight as of 2026-05:
   scaffolding. Introduces `--stack harness` and the `_files`
   template-emission mechanism that subsequent proposals build on.
 - [`thinking/2026-05-09-stack-aware-agent-files/`](thinking/2026-05-09-stack-aware-agent-files/) —
-  making the generated `AGENTS.md` / `CLAUDE.md` / `GEMINI.md` /
+  making the generated `AGENTS.md` / `CLAUDE.md` /
   `skills.md` reflect the stacks the user actually selected, with
   per-stack fragments and a registry-flagged sync mode.
 - [`thinking/2026-05-09-secrets-management/`](thinking/2026-05-09-secrets-management/) —
