@@ -1,7 +1,7 @@
 # AGENTS.md
 
-These rules apply to any agent (Claude Code, Codex, Gemini CLI) operating
-inside this repository. Keep this file under 60 lines.
+These rules apply to any agent (Claude Code, Codex, Antigravity CLI)
+operating inside this repository. Keep this file under 60 lines.
 
 ## Operating rules
 

@@ -34,7 +34,7 @@ This project's security surface includes:
 ### Out of scope
 
 - Vulnerabilities in upstream AI agent CLIs (`@anthropic-ai/claude-code`,
-  `@openai/codex`, `@google/gemini-cli`) — report those to the
+  `@openai/codex`, Google Antigravity CLI / `agy`) — report those to the
   respective projects.
 - Vulnerabilities in MCP servers fetched via `npx` / `uvx`.
 - Vulnerabilities in the base devcontainer image

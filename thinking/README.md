@@ -62,6 +62,15 @@ The bar for landing a doc here:
   observability), keep the essay project-agnostic with a
   separate sunaba-mapping companion, and translate to English
   with a Japanese mirror.
+- [`2026-06-07-antigravity-cli-migration/`](2026-06-07-antigravity-cli-migration/) —
+  migrating the scaffold's Gemini CLI integration to Google's
+  **Antigravity CLI** (`agy`, the Gemini CLI successor; Gemini CLI
+  stops serving on 2026-06-18). Codex `gpt-5.5` and Gemini
+  `gemini-3-flash-preview` concur: stop generating `GEMINI.md`
+  (agy reads `AGENTS.md`), keep the internal `"gemini"` token for
+  back-compat, delegate to agy via headless `agy -p`, swap the
+  bootstrap installer, drop the `gemini-cli` MCP server, and rewrite
+  the autopilot doc as status-and-caveats. Implemented + tested.
 
 ## Implementation order
 

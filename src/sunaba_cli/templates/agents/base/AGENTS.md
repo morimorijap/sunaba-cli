@@ -1,7 +1,7 @@
 # AGENTS.md
 
-These rules apply to any agent (Claude Code, Codex, Gemini CLI) operating
-in this repository.
+These rules apply to any agent (Claude Code, Codex, Antigravity CLI)
+operating in this repository.
 
 ## General rules
 
@@ -47,9 +47,9 @@ Treat this as a default — follow the stack's idiomatic layout when one already
 
 ## MCP servers
 
-Claude Code, Codex, and Gemini CLI are available in this sandbox. Use
-MCP for cross-agent delegation when one agent's specialty fits the task
-better.
+Claude Code, Codex, and the Antigravity CLI (`agy`) are available here.
+Claude/Codex expose MCP servers; delegate to `agy` headlessly via
+`agy -p "<prompt>" --model "<model>"`. Delegate when a specialty fits.
 
 <!-- SUNABA USER START -->
 <!-- Edit freely below. `sunaba sync` preserves anything between the USER markers. -->

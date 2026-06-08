@@ -234,7 +234,7 @@ def _build_agent_files(
     """Compose stack-aware agent files.
 
     Returns a {relpath: content} dict for:
-      - AGENTS.md / CLAUDE.md / GEMINI.md / skills.md (root, with stack
+      - AGENTS.md / CLAUDE.md / skills.md (root, with stack
         sections injected between SUNABA STACKS delimiters)
       - docs/agents/<stack>.md  (per stack, full guidance.md body)
       - .claude/skills/sunaba-<stack>/SKILL.md  (Claude progressive
@@ -262,7 +262,7 @@ def _build_agent_files(
     summary_payload = "\n".join(summary_lines)
     tools_payload = "\n".join(tools_lines)
 
-    for fname in ("AGENTS.md", "CLAUDE.md", "GEMINI.md"):
+    for fname in ("AGENTS.md", "CLAUDE.md"):
         base_path = _AGENT_FILES_BASE_DIR / fname
         if not base_path.exists():
             continue
@@ -400,10 +400,11 @@ def _render_rule(rule_text: str) -> dict[str, str]:
         out[f".claude/rules/{name}.md"] = "\n".join(claude_fm) + "\n\n" + body
 
     if "codex" in targets or "gemini" in targets:
-        # Fallback: a docs page either CLI can read on demand. The proposal
-        # allows directory-scoped AGENTS.md / GEMINI.md when globs map
-        # cleanly to a single directory; that hierarchical placement is
-        # left for a follow-up.
+        # Fallback: a docs page either CLI can read on demand. ("gemini" is
+        # kept as the canonical target token for the Antigravity CLI / agy,
+        # which reads AGENTS.md.) The proposal allows directory-scoped
+        # AGENTS.md when globs map cleanly to a single directory; that
+        # hierarchical placement is left for a follow-up.
         if globs:
             globs_block = "\n".join(f"- `{g}`" for g in globs)
         else:
@@ -562,7 +563,8 @@ def _build_config_files(
         stacks, no_devcontainer=no_devcontainer
     )
 
-    # .mcp.json for Claude Code -> codex/gemini-cli via MCP
+    # .mcp.json for Claude Code -> codex via MCP. (Antigravity CLI / agy is
+    # not an MCP server; Claude delegates to it headlessly via `agy -p`.)
     mcp_template = TEMPLATES_DIR / "base" / "mcp.json"
     if mcp_template.exists():
         files[".mcp.json"] = mcp_template.read_text()
@@ -575,7 +577,7 @@ def _build_config_files(
             json.dumps(vscode_settings, indent=2, ensure_ascii=False) + "\n"
         )
 
-    # Stack-aware agent file composition (root AGENTS/CLAUDE/GEMINI/skills.md
+    # Stack-aware agent file composition (root AGENTS/CLAUDE/skills.md
     # with stack-specific sections injected between SUNABA STACKS delimiters,
     # plus docs/agents/<stack>.md and .claude/skills/sunaba-<stack>/SKILL.md).
     files.update(_build_agent_files(stacks, no_devcontainer=no_devcontainer))
@@ -609,8 +611,8 @@ _STACK_HOST_REQUIREMENTS: dict[str, tuple[str, str]] = {
 _BASE_HOST_REQUIREMENTS: list[tuple[str, str]] = [
     ("claude", "Claude Code CLI"),
     ("codex", "OpenAI Codex CLI"),
-    ("gemini", "Google Gemini CLI"),
-    ("npx", "Node.js / npx (MCP: gemini-cli, playwright, chrome-devtools)"),
+    ("agy", "Antigravity CLI (formerly Gemini CLI)"),
+    ("npx", "Node.js / npx (MCP: playwright, chrome-devtools)"),
     ("uvx", "uv / uvx (MCP: notebooklm-mcp-cli)"),
 ]
 
@@ -761,7 +763,7 @@ def new(
     if not no_agents:
         # Skip agent files that a stack `_files` map already wrote so we don't
         # clobber e.g. the harness stack's AGENTS.md with the generic one.
-        skip = {fname for fname in ("AGENTS.md", "CLAUDE.md", "GEMINI.md", "skills.md") if fname in files}
+        skip = {fname for fname in ("AGENTS.md", "CLAUDE.md", "skills.md") if fname in files}
         copied = copy_agent_files(project_dir, skip=skip)
         if copied:
             click.echo(f"  Copied agent files: {', '.join(copied)}")
@@ -795,7 +797,7 @@ def new(
                 click.echo(f"  - {cmd}  ({reason})")
         click.echo("\nNext steps:")
         click.echo(f"  cd {project_dir}")
-        click.echo("  # Run agents directly on the host (claude / codex / gemini).")
+        click.echo("  # Run agents directly on the host (claude / codex / agy).")
     else:
         click.echo("\nNext steps:")
         click.echo(f"  cd {project_dir}")

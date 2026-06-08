@@ -17,7 +17,7 @@ Before editing in a multi-agent context:
 The protocol is **cooperative, not enforced**. A misbehaving agent
 can ignore it. Defense-in-depth:
 
-- Discipline injected into `AGENTS.md` / `CLAUDE.md` / `GEMINI.md`
+- Discipline injected into `AGENTS.md` / `CLAUDE.md`
   (this guidance plus the `summary.md` line in the
   "Selected stacks" section).
 - Physical isolation via `git worktree` per shard.

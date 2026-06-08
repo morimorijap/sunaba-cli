@@ -69,7 +69,8 @@ def test_sunaba_new_python_no_devcontainer(tmp_path, isolated_registry):
     assert (project / ".vscode" / "settings.json").exists()
     assert (project / "AGENTS.md").exists()
     assert (project / "CLAUDE.md").exists()
-    assert (project / "GEMINI.md").exists()
+    # GEMINI.md is no longer generated — Antigravity CLI (agy) reads AGENTS.md.
+    assert not (project / "GEMINI.md").exists()
     assert (project / "skills.md").exists()
     assert (project / ".gitignore").exists()
 
@@ -466,7 +467,7 @@ def test_sunaba_new_with_autopilot_emits_full_structure(tmp_path, isolated_regis
     assert (project / ".codex" / "hooks" / "verify.sh").exists()
     assert (project / ".githooks" / "pre-push").exists()
     assert (project / "docs" / "agents" / "subagent-dispatch.md").exists()
-    assert (project / "docs" / "agents" / "gemini-autopilot-limitations.md").exists()
+    assert (project / "docs" / "agents" / "antigravity-autopilot.md").exists()
     # Autopilot's planner overrides harness's because it comes later.
     planner = (project / ".claude" / "agents" / "planner.md").read_text()
     assert "claudedocs/plans/" in planner
