@@ -1,5 +1,5 @@
 {
-  "_description": "AI agent API keys + persisted OAuth/session state for claude/codex/gemini CLIs",
+  "_description": "AI agent API keys + persisted OAuth/session state for claude/codex/agy (Antigravity, formerly Gemini) CLIs",
   "remoteEnv": {
     "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}",
     "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",

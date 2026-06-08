@@ -168,7 +168,7 @@ def test_autopilot_emits_expected_paths():
         "claudedocs/plans/.gitkeep",
         "claudedocs/checkpoints/.gitkeep",
         "docs/agents/subagent-dispatch.md",
-        "docs/agents/gemini-autopilot-limitations.md",
+        "docs/agents/antigravity-autopilot.md",
         ".sunaba/autopilot/.gitignore",
     }
     missing = expected - set(files.keys())

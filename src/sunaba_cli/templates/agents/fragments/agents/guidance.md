@@ -8,7 +8,9 @@ CLI auth state in named volumes.
 - `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` pulled from the
   host's environment (must be set on the host before container start).
 - `~/.claude/`, `~/.codex/`, `~/.gemini/` are named-volume mounts so OAuth
-  and session state survive a container rebuild.
+  and session state survive a container rebuild. The Antigravity CLI
+  (`agy`, formerly Gemini CLI) nests its state under
+  `~/.gemini/antigravity-cli/`, so the same volume covers it.
 
 ## Honest limits
 

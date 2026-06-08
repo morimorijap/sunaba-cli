@@ -28,7 +28,7 @@ src/sunaba_cli/
 └── templates/
     ├── base/          # Base devcontainer + bootstrap + mcp.json + dependabot
     ├── stacks/        # One JSON per stack (python, nextjs, aws, ...)
-    └── agents/        # AGENTS.md / CLAUDE.md / GEMINI.md / skills.md
+    └── agents/        # AGENTS.md / CLAUDE.md / skills.md
 ```
 
 ### How stack composition works

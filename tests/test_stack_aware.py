@@ -91,7 +91,7 @@ def test_agents_md_under_60_lines_for_realistic_combos():
         ["python", "nextjs", "agents", "azure"],
     ]:
         files = _build_config_files("p", stacks)
-        for fname in ("AGENTS.md", "CLAUDE.md", "GEMINI.md"):
+        for fname in ("AGENTS.md", "CLAUDE.md"):
             line_count = len(files[fname].splitlines())
             assert line_count <= 60, f"{fname} has {line_count} lines for {stacks}"
 
@@ -145,7 +145,7 @@ def test_stacks_delimiter_present_in_base_files():
     composer cannot inject."""
     from sunaba_cli.cli import _AGENT_FILES_BASE_DIR
 
-    for fname in ("AGENTS.md", "CLAUDE.md", "GEMINI.md", "skills.md"):
+    for fname in ("AGENTS.md", "CLAUDE.md", "skills.md"):
         body = (_AGENT_FILES_BASE_DIR / fname).read_text()
         assert _STACKS_DELIMITER_START in body, fname
         assert _STACKS_DELIMITER_END in body, fname

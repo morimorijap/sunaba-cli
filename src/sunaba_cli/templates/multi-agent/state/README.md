@@ -44,7 +44,7 @@ Coordination state for the cooperative multi-agent protocol.
 This is **cooperative** coordination. The helper script makes the
 right thing easy, but nothing prevents a misbehaving agent from
 editing files outside its `owns:` list. The defense-in-depth is
-the discipline injected into `AGENTS.md` / `CLAUDE.md` /
-`GEMINI.md`, the per-shard `git worktree`, the autopilot stack's
+the discipline injected into `AGENTS.md` / `CLAUDE.md`,
+the per-shard `git worktree`, the autopilot stack's
 verifier and branch protection, and a reviewer subagent reading
 `git diff` before merge.

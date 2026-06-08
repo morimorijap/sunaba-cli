@@ -6,12 +6,6 @@
       "args": ["mcp-server"],
       "env": {}
     },
-    "gemini-cli": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["mcp-gemini-cli", "--allow-npx"],
-      "env": {}
-    },
     "playwright": {
       "type": "stdio",
       "command": "npx",

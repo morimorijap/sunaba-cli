@@ -71,9 +71,15 @@ if ! command -v codex >/dev/null 2>&1; then
   npm install -g "@openai/codex@latest"
 fi
 
-if ! command -v gemini >/dev/null 2>&1; then
-  echo "Installing Gemini CLI (latest)..."
-  npm install -g "@google/gemini-cli@latest"
+# Antigravity CLI (`agy`) — the successor to Gemini CLI (Gemini CLI stops
+# serving free/paid Google AI users on 2026-06-18). Installed via Google's
+# official installer; `agy install` wires up PATH. Guarded so reruns are
+# idempotent. `|| true` keeps a transient install failure from aborting the
+# whole bootstrap (set -e); the host-tool check surfaces a missing agy.
+if ! command -v agy >/dev/null 2>&1; then
+  echo "Installing Antigravity CLI (agy, latest)..."
+  curl -fsSL https://antigravity.google/cli/install.sh | bash || \
+    echo "WARNING: Antigravity CLI install failed; install 'agy' manually."
 fi
 
 # --- Stack-specific (appended by sunaba-cli) ---

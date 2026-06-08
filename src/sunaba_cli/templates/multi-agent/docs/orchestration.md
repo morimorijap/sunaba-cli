@@ -1,7 +1,7 @@
 # Multi-agent orchestration
 
 The cooperative protocol that lets multiple agent instances
-(Claude Code / Codex CLI / Gemini CLI) work on this project in
+(Claude Code / Codex CLI / Antigravity CLI) work on this project in
 parallel without overwriting each other's edits.
 
 > **Default is serial.** This protocol kicks in only when the

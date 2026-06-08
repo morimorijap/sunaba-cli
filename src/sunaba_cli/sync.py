@@ -12,7 +12,7 @@ AGENTS_DIR = TEMPLATES_DIR / "agents" / "base"
 CONFIG_DIR = Path.home() / ".config" / "sunaba-cli"
 REGISTRY_PATH = CONFIG_DIR / "registry.json"
 
-AGENT_FILES = ["AGENTS.md", "CLAUDE.md", "GEMINI.md", "skills.md"]
+AGENT_FILES = ["AGENTS.md", "CLAUDE.md", "skills.md"]
 
 
 class ProjectEntry(TypedDict, total=False):

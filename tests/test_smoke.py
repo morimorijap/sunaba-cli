@@ -364,7 +364,7 @@ def test_missing_host_commands_reports_only_missing():
     assert "aws" not in cmds
     # Missing base agent CLIs and MCP runtime show up
     assert "codex" in cmds
-    assert "gemini" in cmds
+    assert "agy" in cmds
     assert "npx" in cmds
     assert "uvx" in cmds
     # Missing stack-specific tool shows up (uv for python)

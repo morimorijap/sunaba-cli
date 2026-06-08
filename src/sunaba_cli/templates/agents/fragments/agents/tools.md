@@ -1,2 +1,2 @@
 - **API keys (host-injected)**: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` are forwarded from the host shell when `--stack agents` is selected. Available to every process in the container.
-- **Persistent auth volumes**: `~/.claude`, `~/.codex`, `~/.gemini` are named-volume mounts so OAuth / session state survives container rebuilds.
+- **Persistent auth volumes**: `~/.claude`, `~/.codex`, `~/.gemini` are named-volume mounts so OAuth / session state survives container rebuilds. (The Antigravity CLI / `agy` keeps its state under `~/.gemini/antigravity-cli/`.)
