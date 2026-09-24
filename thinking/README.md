@@ -79,6 +79,18 @@ The bar for landing a doc here:
   back-compat, delegate to agy via headless `agy -p`, swap the
   bootstrap installer, drop the `gemini-cli` MCP server, and rewrite
   the autopilot doc as status-and-caveats. Implemented + tested.
+- [`2026-09-24-maruda-adoption/`](2026-09-24-maruda-adoption/) —
+  adopting ideas from [northraystudio/maruda](https://github.com/northraystudio/maruda)
+  (MIT) in phases. Phase 1 (implemented) fixes a critical bug: the
+  generated `.gitleaks.toml` disabled gitleaks' default rules, so
+  `--stack secrets` detected nothing. It also replaces
+  `gitleaks-action` (license key required on org repos) with a
+  checksum-verified binary, SHA-pins every action, scans PR ranges and
+  full history on push, fails closed when git errors (gitleaks#2129),
+  and adds real-binary tests, a SHA-pin audit, and a `sunaba sync`
+  warning for affected projects. Codex `gpt-5.5` and fugu
+  `fugu-ultra-v1.1` reviewed. Phases 2–3 (Semgrep /
+  Trivy / branch protection, security-review skills) are planned.
 
 ## Implementation order
 
