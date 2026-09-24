@@ -93,6 +93,27 @@ key. We document the
 version of this pattern in detail; equivalent patterns exist on
 AWS (API Gateway / Lambda) and GCP (Apigee / API Gateway).
 
+## Merge gates
+
+`--stack security-ci` adds Semgrep (SAST) and Trivy (dependency CVEs)
+to CI. Their limits:
+
+- **They block merges only once they are required checks.** Use
+  `scripts/protect-branch.sh`, which needs a public repository or a
+  paid plan (rulesets are not available on free private repositories).
+- **They are pattern and advisory based.** Semgrep does not find
+  business-logic or authorization flaws. Trivy only knows published
+  advisories in lockfiles, and it skips dev dependencies and
+  unfixed vulnerabilities by default.
+- **Some inputs float.** Semgrep registry rules and the Trivy
+  vulnerability database are fetched at run time; only the engines are
+  pinned. Both jobs fail closed when the scanner errors.
+- **Scanner supply chain.** Trivy's release channel was compromised in
+  March 2026 ([GHSA-69fq-xp46-6x23](https://github.com/aquasecurity/trivy/security/advisories/GHSA-69fq-xp46-6x23)).
+  The template installs a checksum-verified, immutable release binary
+  and pins the Semgrep image by digest. Bump them by hand, never to a
+  mutable tag.
+
 ## Autonomy
 
 `--stack autopilot` is **autonomous**. The Stop hook re-engages the

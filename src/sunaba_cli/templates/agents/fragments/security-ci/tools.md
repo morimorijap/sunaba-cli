@@ -1,0 +1,2 @@
+- **security-scan workflow**: `SAST (Semgrep)` blocks on findings; `Dependency Scan (Trivy)` warns until the repository variable `SUNABA_TRIVY_BLOCKING` is `true`. Details and triage in `docs/security/README.md`.
+- **scripts/protect-branch.sh**: makes the checks required via a GitHub ruleset once they have passed on the default branch (`--dry-run` first; needs `gh` as repository admin).

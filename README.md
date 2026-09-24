@@ -112,6 +112,7 @@ the MCP runtime (`npx`, `uvx`), and stack-specific tools (e.g. `uv`, `aws`,
 | `rules` | Multi-target path-scoped rule files. One canonical source under `templates/rules/` renders to `.cursor/rules/<name>.mdc` (Cursor `globs:` / `alwaysApply:`), `.claude/rules/<name>.md` (Claude `paths:`), and `docs/agents/rules/<name>.md` (Codex / Gemini fallback). Low-risk context improvement; no runtime behavior change. |
 | `autopilot` | Opt-in autonomous environment for Claude Code and Codex CLI: structured Stop-hook re-engage with budget caps (`SUNABA_AUTOPILOT_MAX_ITERS` / `_MINUTES` / `_CHANGED_FILES`), branch protection via `.githooks/pre-push`, operational planner / reviewer / verifier role files (Claude `.claude/agents/*.md` + Codex `.codex/agents/*.toml`), a subagent dispatch protocol document, `claudedocs/{plans,checkpoints}/`. **Changes agent runtime behavior** (Stop hook re-engages on verifier failure). Recommended invocation: `--stack harness --stack rules --stack autopilot` in that order so autopilot's operational role files override harness's seeds. Antigravity CLI (`agy`) status & caveats are documented — see `docs/agents/antigravity-autopilot.md`. |
 | `multi-agent` | Cooperative parallel-agent orchestration: shared YAML task list at `.agents/multi-agent/tasks.yaml` validated by `schema.json`, `owns:`-based hybrid conflict avoidance (overlapping `owns:` → orchestrator serializes), default cohort cap 4 via `SUNABA_MULTI_AGENT_MAX`, sharding flowchart in `docs/multi-agent/sharding.md`, `flock`-protected helper script (`scripts/agent-task.py`) with `claim` / `start` / `complete` / `fail` / `block` / `check-owns` / `overlap` subcommands, scoped subagent prompt template. Templates only — coordination is **cooperative, not enforced** (the helper makes the right thing easy; defense-in-depth is `git worktree` per shard + autopilot's branch protection + reviewer subagent). Recommended together with `--stack autopilot`. |
+| `security-ci` | Security merge gates: `.github/workflows/security-scan.yml` runs **Semgrep** SAST (`p/security-audit` + `p/owasp-top-ten`, blocking via `--error`, digest-pinned image) and **Trivy** dependency scanning of any lockfile (checksum-verified binary; warns until the repository variable `SUNABA_TRIVY_BLOCKING` is `true`), with no `paths:` filters so both can be required checks. `scripts/protect-branch.sh` makes them required through a GitHub ruleset on the default branch plus any `--branch` (e.g. `staging`), but only after they have passed there; `docs/security/` documents the maturity ladder and triage. **Opt-in because it adds merge gates.** Pairs with `--stack secrets`. |
 
 List them at runtime:
 
@@ -377,12 +378,14 @@ for the implementation order and how the proposals interact.
 
 ## Acknowledgements
 
-- The hardened secret-scan workflow, the `.gitleaks.toml` policy, and
-  the SHA-pin audit test are adapted from
+- The hardened secret-scan workflow, the `.gitleaks.toml` policy, the
+  SHA-pin audit test, and the `security-ci` gate layout, maturity
+  ladder, and branch-protection helper are adapted from
   [northraystudio/maruda](https://github.com/northraystudio/maruda)
   (MIT, © 2026 NorthRay Studio株式会社). See
   [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and
-  [`thinking/2026-09-24-maruda-adoption/`](thinking/2026-09-24-maruda-adoption/).
+  [`thinking/2026-09-24-maruda-adoption/`](thinking/2026-09-24-maruda-adoption/) /
+  [`thinking/2026-09-24-security-ci-gates/`](thinking/2026-09-24-security-ci-gates/).
 
 ## Contributing
 

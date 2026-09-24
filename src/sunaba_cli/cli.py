@@ -605,6 +605,7 @@ _STACK_HOST_REQUIREMENTS: dict[str, tuple[str, str]] = {
     "gcp": ("gcloud", "Google Cloud CLI (--stack gcp)"),
     "neon": ("neonctl", "Neon Postgres CLI (--stack neon)"),
     "nextjs": ("vercel", "Vercel CLI (--stack nextjs)"),
+    "security-ci": ("gh", "GitHub CLI for scripts/protect-branch.sh (--stack security-ci)"),
 }
 
 # Always-required commands when running --no-devcontainer (agent CLIs + MCP runtime).
@@ -694,7 +695,7 @@ def _diff_files(project_dir: Path, files: dict[str, str]) -> dict[str, str]:
 
 
 @click.group()
-@click.version_option(version="0.2.3")
+@click.version_option(version="0.3.0")
 def main():
     """sunaba-cli: One-command devcontainer sandbox for AI agent development."""
     pass
