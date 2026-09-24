@@ -70,9 +70,13 @@ layer has clear limits:
   bring an existing project up to the current baseline without
   losing your own additions.
 - `--stack secrets` adds `pre-commit` with `gitleaks`, a
-  `.gitleaks.toml` allowlist, and a CI scan. This blocks commits
-  with detected secrets; it does not protect already-tracked
-  files.
+  `.gitleaks.toml` that extends gitleaks' default rules, and a CI
+  scan of the full git history. This blocks commits with detected
+  secrets; it does not protect already-tracked files. Projects
+  generated before 0.2.3 received a `.gitleaks.toml` that disabled
+  the default rules, so neither the hook nor CI detected anything;
+  `sunaba sync` warns about such projects (details in
+  [`thinking/2026-09-24-maruda-adoption/`](thinking/2026-09-24-maruda-adoption/)).
 - Per-cloud guidance in [`docs/secrets/`](docs/secrets/) (when
   `--stack secrets` is selected) describes where each platform
   expects secrets to live (Vercel env vars, Google Secret

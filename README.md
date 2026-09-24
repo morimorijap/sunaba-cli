@@ -108,7 +108,7 @@ the MCP runtime (`npx`, `uvx`), and stack-specific tools (e.g. `uv`, `aws`,
 | `docker` | `docker-outside-of-docker` (access host Docker daemon) |
 | `playwright` | Chromium + Linux deps for Playwright / Chrome DevTools MCP (E2E browser automation) |
 | `harness` | Claude Code-oriented harness templates: `.claude/settings.json` (permissions + Stop hook), a silent-on-success `verify.sh`, on-demand skills, planner / reviewer / verifier sub-agent role files, a 60-line ratchet `AGENTS.md`, and a `claudedocs/` trace directory. **Opt-in because it changes agent behavior at session boundaries.** |
-| `secrets` | Secret hygiene scaffold: `.pre-commit-config.yaml` with `gitleaks` (pinned tag), a `.gitleaks.toml` allowlist, a CI scan workflow, and per-cloud docs in `docs/secrets/` (Vercel · Firebase · AWS · GCP · Azure Foundry → APIM → Gemini → Cosmos). **Opt-in because it changes commit-time behavior** (`git commit` is blocked when a secret is detected). |
+| `secrets` | Secret hygiene scaffold: `.pre-commit-config.yaml` with `gitleaks` (frozen to a release commit), a `.gitleaks.toml` that extends gitleaks' default rules, a CI scan workflow (SHA-pinned actions, checksum-verified gitleaks, full-history scan), and per-cloud docs in `docs/secrets/` (Vercel · Firebase · AWS · GCP · Azure Foundry → APIM → Gemini → Cosmos). **Opt-in because it changes commit-time behavior** (`git commit` is blocked when a secret is detected). |
 | `rules` | Multi-target path-scoped rule files. One canonical source under `templates/rules/` renders to `.cursor/rules/<name>.mdc` (Cursor `globs:` / `alwaysApply:`), `.claude/rules/<name>.md` (Claude `paths:`), and `docs/agents/rules/<name>.md` (Codex / Gemini fallback). Low-risk context improvement; no runtime behavior change. |
 | `autopilot` | Opt-in autonomous environment for Claude Code and Codex CLI: structured Stop-hook re-engage with budget caps (`SUNABA_AUTOPILOT_MAX_ITERS` / `_MINUTES` / `_CHANGED_FILES`), branch protection via `.githooks/pre-push`, operational planner / reviewer / verifier role files (Claude `.claude/agents/*.md` + Codex `.codex/agents/*.toml`), a subagent dispatch protocol document, `claudedocs/{plans,checkpoints}/`. **Changes agent runtime behavior** (Stop hook re-engages on verifier failure). Recommended invocation: `--stack harness --stack rules --stack autopilot` in that order so autopilot's operational role files override harness's seeds. Antigravity CLI (`agy`) status & caveats are documented — see `docs/agents/antigravity-autopilot.md`. |
 | `multi-agent` | Cooperative parallel-agent orchestration: shared YAML task list at `.agents/multi-agent/tasks.yaml` validated by `schema.json`, `owns:`-based hybrid conflict avoidance (overlapping `owns:` → orchestrator serializes), default cohort cap 4 via `SUNABA_MULTI_AGENT_MAX`, sharding flowchart in `docs/multi-agent/sharding.md`, `flock`-protected helper script (`scripts/agent-task.py`) with `claim` / `start` / `complete` / `fail` / `block` / `check-owns` / `overlap` subcommands, scoped subagent prompt template. Templates only — coordination is **cooperative, not enforced** (the helper makes the right thing easy; defense-in-depth is `git worktree` per shard + autopilot's branch protection + reviewer subagent). Recommended together with `--stack autopilot`. |
@@ -374,6 +374,15 @@ These are **drafts under review**, not shipped features. The shape
 is intentional: docs land first so the design can be argued with
 before implementation. See [`thinking/README.md`](thinking/README.md)
 for the implementation order and how the proposals interact.
+
+## Acknowledgements
+
+- The hardened secret-scan workflow, the `.gitleaks.toml` policy, and
+  the SHA-pin audit test are adapted from
+  [northraystudio/maruda](https://github.com/northraystudio/maruda)
+  (MIT, © 2026 NorthRay Studio株式会社). See
+  [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and
+  [`thinking/2026-09-24-maruda-adoption/`](thinking/2026-09-24-maruda-adoption/).
 
 ## Contributing
 

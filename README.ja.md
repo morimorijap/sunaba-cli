@@ -105,7 +105,7 @@ sunaba new local --stack python --no-devcontainer
 | `docker` | `docker-outside-of-docker` (ホストの Docker daemon にアクセス) |
 | `playwright` | Chromium + Linux 依存ライブラリ (Playwright / Chrome DevTools MCP の E2E 用) |
 | `harness` | Claude Code 向け harness テンプレート: `.claude/settings.json` (permissions + Stop hook)、silent-on-success な `verify.sh`、オンデマンド skill、planner / reviewer / verifier 役割定義、60行以内の ratchet `AGENTS.md`、`claudedocs/` トレースディレクトリ。**セッション境界での agent 挙動が変わるため opt-in。** |
-| `secrets` | Secret 漏洩防止スキャフォールド: `gitleaks` を固定 tag で pin した `.pre-commit-config.yaml`、`.gitleaks.toml` allowlist、CI scan workflow、`docs/secrets/` 配下のクラウド別ドキュメント (Vercel · Firebase · AWS · GCP · Azure Foundry → APIM → Gemini → Cosmos)。**コミット時挙動が変わる(検知時は `git commit` がブロック)ため opt-in。** |
+| `secrets` | Secret 漏洩防止スキャフォールド: `gitleaks` をリリースのコミット SHA で固定した `.pre-commit-config.yaml`、gitleaks のデフォルトルールを継承する `.gitleaks.toml`、CI scan workflow (action は SHA 固定、gitleaks は SHA-256 検証、全履歴スキャン)、`docs/secrets/` 配下のクラウド別ドキュメント (Vercel · Firebase · AWS · GCP · Azure Foundry → APIM → Gemini → Cosmos)。**コミット時挙動が変わる(検知時は `git commit` がブロック)ため opt-in。** |
 | `rules` | パススコープ付きルールを複数ターゲットに展開。`templates/rules/` のキャノニカル source 1 ファイルから `.cursor/rules/<name>.mdc`(Cursor の `globs:` / `alwaysApply:`)、`.claude/rules/<name>.md`(Claude の `paths:`)、`docs/agents/rules/<name>.md`(Codex / Gemini フォールバック)を生成。低リスクなコンテキスト改善で、ランタイム挙動は変わりません。 |
 | `autopilot` | Claude Code / Codex CLI 向けの opt-in な自走環境: budget cap (`SUNABA_AUTOPILOT_MAX_ITERS` / `_MINUTES` / `_CHANGED_FILES`)付き構造化 Stop hook 再起動、`.githooks/pre-push` によるブランチ保護、operational な planner / reviewer / verifier 役割定義(Claude `.claude/agents/*.md` + Codex `.codex/agents/*.toml`)、subagent dispatch protocol ドキュメント、`claudedocs/{plans,checkpoints}/`。**agent ランタイム挙動が変わる**(verifier 失敗時 Stop hook が再起動)。推奨呼び出し: `--stack harness --stack rules --stack autopilot` の順(autopilot の operational 役割定義が harness の seed を上書きするため)。Antigravity CLI(`agy`)の対応状況と注意点は `docs/agents/antigravity-autopilot.md` で扱う。 |
 | `multi-agent` | 並列エージェント協調オーケストレーション: `.agents/multi-agent/tasks.yaml` で `schema.json` 検証された共有タスクリスト、`owns:` ベースの hybrid 衝突回避(重複 → orchestrator が直列化)、デフォルト cohort cap 4(`SUNABA_MULTI_AGENT_MAX`)、`docs/multi-agent/sharding.md` の sharding フローチャート、`flock` 保護ヘルパースクリプト(`scripts/agent-task.py` の `claim` / `start` / `complete` / `fail` / `block` / `check-owns` / `overlap` サブコマンド)、scoped subagent プロンプトテンプレート。テンプレートのみ — 協調は **cooperative, not enforced**(ヘルパーが正しい操作を最も簡単にする;defense-in-depth は per-shard `git worktree` + autopilot のブランチ保護 + reviewer subagent)。`--stack autopilot` との併用推奨。 |
@@ -235,6 +235,15 @@ git push                   # SSH 経由で push できる
 ありません。意図的にドキュメントを先に置き、実装前に議論できる形に
 しています。実装順序と提案間の相互作用は
 [`thinking/README.md`](thinking/README.md) を参照してください。
+
+## 謝辞
+
+- 堅牢化した secret スキャンの workflow、`.gitleaks.toml` の運用方針、
+  SHA 固定を監査するテストは
+  [northraystudio/maruda](https://github.com/northraystudio/maruda)
+  (MIT, © 2026 NorthRay Studio株式会社) を元にしています。詳細は
+  [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) と
+  [`thinking/2026-09-24-maruda-adoption/`](thinking/2026-09-24-maruda-adoption/) を参照してください。
 
 ## ライセンス
 

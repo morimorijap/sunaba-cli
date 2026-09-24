@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -12,12 +15,58 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Set up Python
         run: uv python install ${{ matrix.python-version }}
       - name: Run tests
         run: uv run --python ${{ matrix.python-version }} --with pytest --with click pytest tests/ -q
       - name: Build wheel
         run: uv build
+
+  # Scans this repository's own history, then runs the tests that need a
+  # real gitleaks binary (they skip in the `test` job, where it is absent).
+  # The install step mirrors templates/secrets/github-workflow-gitleaks.yml.
+  gitleaks:
+    name: Secret Scan (Gitleaks)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install gitleaks (pinned, SHA-256 verified)
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/gitleaks.tar.gz"
+          curl -sSfL --retry 3 --connect-timeout 10 --max-time 120 -o "$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  $archive" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/bin"
+          tar -xzf "$archive" -C "$RUNNER_TEMP/bin" gitleaks
+          test "$("$RUNNER_TEMP/bin/gitleaks" version)" = "$GITLEAKS_VERSION"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Scan full git history
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/gitleaks.log"
+          gitleaks git --redact --verbose --no-color --ignore-gitleaks-allow \
+            --log-opts="--no-ext-diff --no-textconv" . 2>&1 | tee "$log"
+          # gitleaks exits 0 when git itself fails (gitleaks/gitleaks#2129).
+          if grep -Eq '^[^ ]+ ERR ' "$log"; then
+            echo "::error title=gitleaks did not complete::git reported errors"
+            exit 1
+          fi
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: Run gitleaks-backed tests
+        env:
+          SUNABA_REQUIRE_GITLEAKS: "1"
+        run: uv run --with pytest --with click pytest tests/test_secrets.py -q -k "gitleaks_binary or workflow_scan"

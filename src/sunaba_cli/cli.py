@@ -694,7 +694,7 @@ def _diff_files(project_dir: Path, files: dict[str, str]) -> dict[str, str]:
 
 
 @click.group()
-@click.version_option(version="0.2.1")
+@click.version_option(version="0.2.3")
 def main():
     """sunaba-cli: One-command devcontainer sandbox for AI agent development."""
     pass
@@ -962,6 +962,32 @@ def rebuild(
             )
 
 
+def _has_noop_gitleaks_config(project_path: Path) -> bool:
+    """True for a `.gitleaks.toml` without `useDefault = true`, as emitted by
+    `--stack secrets` before 0.2.3. Such a config replaces gitleaks' default
+    rules and detects nothing (see thinking/2026-09-24-maruda-adoption/)."""
+    path = project_path / ".gitleaks.toml"
+    if not path.is_file() or path.is_symlink():
+        return False
+    try:
+        text = path.read_text()
+    except (OSError, UnicodeDecodeError):
+        return False
+    return "sunaba generated gitleaks config" in text and "useDefault = true" not in text
+
+
+def _warn_noop_gitleaks_config(proj_name: str, project_path: Path) -> None:
+    if _has_noop_gitleaks_config(project_path):
+        click.echo(
+            f"  WARNING: {project_path}/.gitleaks.toml disables gitleaks' default rules, so "
+            "the secret scan detects nothing.\n"
+            "    Fix: add these two lines to that file:  [extend]  /  useDefault = true\n"
+            "    Or review a full regeneration of the stack files (hardened CI workflow "
+            f"included) with:  sunaba rebuild {proj_name} --dry-run",
+            err=True,
+        )
+
+
 @main.command()
 @click.argument("name", required=False)
 @click.option("--all", "sync_all_flag", is_flag=True, help="Sync all registered projects.")
@@ -974,6 +1000,7 @@ def sync(name: str | None, sync_all_flag: bool):
             return
         for proj_name, proj_path, copied in results:
             click.echo(f"  {proj_name} ({proj_path}): {', '.join(copied) if copied else 'no files'}")
+            _warn_noop_gitleaks_config(proj_name, proj_path)
         click.echo(f"\nSynced {len(results)} project(s).")
     elif name:
         proj_path, copied = sync_project(name)
@@ -981,6 +1008,7 @@ def sync(name: str | None, sync_all_flag: bool):
             click.echo(f"Error: Project '{name}' not found in registry.", err=True)
             raise SystemExit(1)
         click.echo(f"  Synced to {proj_path}: {', '.join(copied) if copied else 'no files'}")
+        _warn_noop_gitleaks_config(name, proj_path)
     else:
         click.echo("Error: Provide a project name or use --all.", err=True)
         raise SystemExit(1)

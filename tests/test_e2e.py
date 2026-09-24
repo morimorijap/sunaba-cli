@@ -678,3 +678,38 @@ def test_legacy_static_mode_uses_verbatim_copy(tmp_path, isolated_registry):
     # Static copy of base/AGENTS.md has the delimiters but NO injected content.
     assert "<!-- SUNABA STACKS START -->" in agents
     assert "uv run pytest" not in agents
+
+
+_LEGACY_NOOP_GITLEAKS_TOML = '''title = "sunaba generated gitleaks config"
+
+[allowlist]
+description = "Templates and example files only — never real local secrets."
+paths = [
+  \'\'\'^\\.env\\.example$\'\'\',
+]
+'''
+
+
+def test_sync_warns_about_legacy_noop_gitleaks_config(tmp_path, isolated_registry):
+    """Projects generated before the fix carry a .gitleaks.toml that disables
+    gitleaks' default rules; `sunaba sync` must say so. A current config must
+    not trigger the warning."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    r = _run(
+        ["new", "leg", "--stack", "secrets", "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert r.returncode == 0, r.stderr
+    project = workspace / "leg"
+
+    clean = _run(["sync", "leg"], cwd=workspace)
+    assert clean.returncode == 0, clean.stderr
+    assert "WARNING" not in clean.stderr
+
+    (project / ".gitleaks.toml").write_text(_LEGACY_NOOP_GITLEAKS_TOML)
+    for args in (["sync", "leg"], ["sync", "--all"]):
+        r = _run(args, cwd=workspace)
+        assert r.returncode == 0, r.stderr
+        assert "detects nothing" in r.stderr, args
+        assert "useDefault = true" in r.stderr
