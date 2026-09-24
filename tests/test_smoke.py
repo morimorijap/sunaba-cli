@@ -435,3 +435,14 @@ def test_upgrade_repo_override_normalizes_to_git_prefix(monkeypatch):
     result = runner.invoke(main, ["upgrade", "--repo", "https://example.com/x"])
     assert result.exit_code == 0, result.output
     assert captured["cmd"][-1] == "git+https://example.com/x"
+
+
+def test_version_is_consistent_across_package_cli_and_changelog():
+    """`sunaba --version` once reported 0.2.1 while the package was 0.2.2."""
+    import tomllib
+
+    root = Path(__file__).resolve().parent.parent
+    version = tomllib.loads((root / "pyproject.toml").read_text())["project"]["version"]
+    out = CliRunner().invoke(main, ["--version"]).output
+    assert out.strip().endswith(f"version {version}"), out
+    assert f"## [{version}]" in (root / "CHANGELOG.md").read_text()

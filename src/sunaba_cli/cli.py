@@ -965,7 +965,7 @@ def rebuild(
 
 def _has_noop_gitleaks_config(project_path: Path) -> bool:
     """True for a `.gitleaks.toml` without `useDefault = true`, as emitted by
-    `--stack secrets` before 0.2.3. Such a config replaces gitleaks' default
+    `--stack secrets` before 0.3.0. Such a config replaces gitleaks' default
     rules and detects nothing (see thinking/2026-09-24-maruda-adoption/)."""
     path = project_path / ".gitleaks.toml"
     if not path.is_file() or path.is_symlink():

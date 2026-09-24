@@ -1,8 +1,17 @@
 # sunaba-cli
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Release](https://img.shields.io/github/v/release/morimorijap/sunaba-cli)](https://github.com/morimorijap/sunaba-cli/releases)
+[![CI](https://github.com/morimorijap/sunaba-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/morimorijap/sunaba-cli/actions/workflows/ci.yml)
 
 > English version: [README.md](README.md)
+
+> **0.3.0 (2026-09-24)** が最初のタグ付きリリースです。`--stack secrets` の
+> バグを修正しました。生成される gitleaks の設定が何も検出していませんでした。
+> 以前にこの stack を使ったことがある方は [CHANGELOG](CHANGELOG.md#security) を
+> 確認してください。あわせて、opt-in の Semgrep / Trivy マージゲート
+> (`--stack security-ci`) を追加しました。
 
 **AI エージェント開発用の devcontainer sandbox をコマンド一発で作る CLI。**
 
@@ -25,6 +34,7 @@ MCP 経由で互いに通信できる状態で起動します。
 - 🔌 **合成可能** — スタックを組み合わせ (`python`, `nextjs`, `aws`, `gcp` …)
 - 🤖 **エージェント相互連携** — Claude Code が MCP 経由で Codex を、`agy -p` で Antigravity CLI を呼べる
 - 🔐 **秘密情報は opt-in** — API キーは `--stack agents` を指定したときだけ注入
+- 🛡️ **セキュリティゲートも opt-in** — secret スキャン (`--stack secrets`) と、マージをブロックできる Semgrep SAST・Trivy 依存関係スキャン (`--stack security-ci`)
 - 📦 **自己完結** — `uv tool install` でグローバル `sunaba` コマンド化
 
 ## インストール
@@ -35,7 +45,13 @@ MCP 経由で互いに通信できる状態で起動します。
 uv tool install git+https://github.com/morimorijap/sunaba-cli
 ```
 
-`sunaba` コマンドが PATH に追加されます。
+`sunaba` コマンドが PATH に追加されます (`sunaba --version` で確認できます)。
+
+`main` を追いかけずに、リリースを固定して入れる場合:
+
+```bash
+uv tool install git+https://github.com/morimorijap/sunaba-cli@v0.3.0
+```
 
 ### アップグレード
 
@@ -79,6 +95,19 @@ sunaba new local --stack python --no-devcontainer
 `uv` / `aws` / `gcloud` / `az` / `neonctl` / `vercel` 等) を警告として
 表示します。表示されたものをホスト側で手動インストールしてください。
 
+### セキュリティゲート付きで作る
+
+```bash
+sunaba new secured --stack python --stack secrets --stack security-ci
+# push して、デフォルトブランチでチェックが一度成功したら:
+scripts/protect-branch.sh --dry-run && scripts/protect-branch.sh
+```
+
+`scripts/protect-branch.sh` は、GitHub のルールセットで各チェックを必須にします。
+依存関係の警告を整理し終えたら、`gh variable set SUNABA_TRIVY_BLOCKING --body true`
+で Trivy もブロックに切り替えます。詳しくは生成される `docs/security/README.md` を
+参照してください。
+
 ## コマンド一覧
 
 | コマンド | 用途 |
@@ -88,7 +117,8 @@ sunaba new local --stack python --no-devcontainer
 | `sunaba register <path> --stack ...` | 既存プロジェクトを registry に追加 |
 | `sunaba list` | 登録済みプロジェクト一覧 |
 | `sunaba stacks` | 利用可能な stack 一覧 |
-| `sunaba sync [<name>\|--all]` | エージェント指示ファイルを同期 |
+| `sunaba sync [<name>\|--all]` | エージェント指示ファイルを同期 (既知の問題がある生成設定も警告) |
+| `sunaba sync-gitignore <name\|path>` | プロジェクトの `.gitignore` を最新の secret ファイル baseline に更新 (独自の行は保持) |
 | `sunaba upgrade` | sunaba-cli 自体を更新 |
 
 ## Stack 一覧
@@ -127,6 +157,13 @@ sunaba new local --stack python --no-devcontainer
 - **Fail-closed な依存解決**: `package-lock.json` がある場合のみ `npm ci --ignore-scripts`、
   `pyproject.toml` がある場合のみ `uv sync --frozen` を実行。無言のフォールバックなし。
 - **`uv` は pip 経由でインストール**: リモートシェルスクリプトの実行を回避。
+- **スキャナは固定・検証済み**: CI テンプレートは GitHub Actions をすべてコミット SHA で、
+  Semgrep イメージを digest で、gitleaks と Trivy のバイナリをバージョンと SHA-256 で
+  固定しています。スキャナが失敗したときはジョブも失敗します (fail-closed)。
+  2026 年 3 月の Trivy 侵害
+  ([GHSA-69fq-xp46-6x23](https://github.com/aquasecurity/trivy/security/advisories/GHSA-69fq-xp46-6x23))
+  を踏まえ、スキャナの action や書き換え可能なタグは使っていません。sunaba 自身にも
+  同じゲートを適用しています。
 
 ### `sunaba-cli` が守れないもの
 
@@ -142,6 +179,12 @@ sunaba new local --stack python --no-devcontainer
 - **エージェントそのものの制約**: このツールは AI エージェント自体をサンドボックス化
   するものではありません。コンテナ内で `rm -rf` したりシークレットを push したりは
   可能です。**sandbox が守るのはホストであり、あなたの repo ではありません。**
+- **セキュリティゲートは保証ではない**: `--stack security-ci` が検出するのは、
+  既知のパターン (Semgrep) と、ロックファイルに記載された公開済みの脆弱性 (Trivy)
+  です。認可やビジネスロジックの欠陥は見つけられません。また、
+  `scripts/protect-branch.sh` でチェックを必須にするまではマージを止めません。
+  これには public リポジトリか GitHub の有料プランが必要です。
+  [SECURITY.md](SECURITY.md#merge-gates) を参照してください。
 - **`--stack harness`**: 各エージェントセッション終了時に `bash .claude/hooks/verify.sh`
   を走らせる Claude Code Stop hook を仕込みます。hook はテンプレートなので、コードと
   同じ目で review してください。任意のローカルコマンドを実行できます。permissions リストは
@@ -213,29 +256,32 @@ git push                   # SSH 経由で push できる
 公開設計ドキュメントとして練ります。各エントリは「現状把握 → リサーチ
 → 独立した LLM レビュー → 統合提案」という自己完結セットです。
 
-2026-05 時点の draft:
+実装済みの設計(取り込んだ順):
 
-- [`thinking/2026-05-09-harness-engineering/`](thinking/2026-05-09-harness-engineering/) —
-  OpenAI / Martin Fowler / HumanLayer / Addy Osmani / Red Hat の
-  harness engineering 観点を生成テンプレートに反映。`--stack harness`
-  と、後続提案の基盤になる `_files` テンプレート出力機構を導入。
-- [`thinking/2026-05-09-stack-aware-agent-files/`](thinking/2026-05-09-stack-aware-agent-files/) —
-  生成される `AGENTS.md` / `CLAUDE.md` / `skills.md` を
-  選択された stack に応じて差し替える。stack 別 fragment と、
-  registry flag による opt-in な sync モードを追加。
-- [`thinking/2026-05-09-secrets-management/`](thinking/2026-05-09-secrets-management/) —
-  `.gitignore` の baseline 拡張、opt-in な `--stack secrets`(gitleaks
-  pre-commit + クラウド別ドキュメント)、Azure Foundry → APIM →
-  Gemini → Cosmos の「key behind a proxy」パターン文書化。
-- [`thinking/2026-05-09-rules-and-autonomy/`](thinking/2026-05-09-rules-and-autonomy/) —
-  multi-target な path-scoped rule(`--stack rules`)と opt-in な
-  自走環境(`--stack autopilot`)。構造化 Stop hook 再起動、budget
-  cap、subagent dispatch protocol を含む。
+- [`thinking/2026-05-09-harness-engineering/`](thinking/2026-05-09-harness-engineering/):
+  `--stack harness` と `_files` によるテンプレート出力の仕組み。
+- [`thinking/2026-05-09-stack-aware-agent-files/`](thinking/2026-05-09-stack-aware-agent-files/):
+  stack ごとの `AGENTS.md` / `CLAUDE.md` / `skills.md` と、registry フラグで切り替える sync モード。
+- [`thinking/2026-05-09-secrets-management/`](thinking/2026-05-09-secrets-management/):
+  `.gitignore` の baseline、`--stack secrets`、Azure Foundry → APIM → Gemini →
+  Cosmos の「key behind a proxy」パターン。
+- [`thinking/2026-05-09-rules-and-autonomy/`](thinking/2026-05-09-rules-and-autonomy/):
+  `--stack rules` と `--stack autopilot`。
+- [`thinking/2026-05-09-multi-agent-orchestration/`](thinking/2026-05-09-multi-agent-orchestration/):
+  `--stack multi-agent`。
+- [`thinking/2026-06-07-antigravity-cli-migration/`](thinking/2026-06-07-antigravity-cli-migration/):
+  Gemini CLI から Antigravity CLI (`agy`) への移行。
+- [`thinking/2026-09-24-maruda-adoption/`](thinking/2026-09-24-maruda-adoption/):
+  `--stack secrets` の検出不能バグの修正と gitleaks の堅牢化 (0.3.0)。
+- [`thinking/2026-09-24-security-ci-gates/`](thinking/2026-09-24-security-ci-gates/):
+  `--stack security-ci` と `scripts/protect-branch.sh` (0.3.0)。
 
-これらは **draft レビュー中** であり、まだ shipping された機能では
-ありません。意図的にドキュメントを先に置き、実装前に議論できる形に
-しています。実装順序と提案間の相互作用は
-[`thinking/README.md`](thinking/README.md) を参照してください。
+設計メモのみで未実装のもの:
+[`2026-05-22-e2e-evidence-artifacts/`](thinking/2026-05-22-e2e-evidence-artifacts/)、
+[エンタープライズ開発エッセイ](thinking/2026-05-26-enterprise-development-improvements/)。
+次は maruda 取り込みの Phase 3 (LLM によるセキュリティレビュー skill) の予定です。
+全体の索引は [`thinking/README.md`](thinking/README.md)、リリース履歴は
+[CHANGELOG.md](CHANGELOG.md) にあります。
 
 ## 謝辞
 

@@ -17,6 +17,16 @@ Please include:
 We aim to acknowledge reports within 72 hours and to ship fixes for
 high-severity issues within two weeks.
 
+## Supported versions
+
+Security fixes land on `main` and in the next tagged release. Only the
+latest release is supported; before 0.3.0 nothing was tagged.
+
+| Version | Supported |
+|---|---|
+| 0.3.x | ✅ |
+| < 0.3.0 (untagged installs from `main`) | ❌ — run `sunaba upgrade` |
+
 ## Scope
 
 `sunaba-cli` is a scaffolding tool. Its security surface is primarily:
@@ -73,7 +83,7 @@ layer has clear limits:
   `.gitleaks.toml` that extends gitleaks' default rules, and a CI
   scan of the full git history. This blocks commits with detected
   secrets; it does not protect already-tracked files. Projects
-  generated before 0.2.3 received a `.gitleaks.toml` that disabled
+  generated before 0.3.0 received a `.gitleaks.toml` that disabled
   the default rules, so neither the hook nor CI detected anything;
   `sunaba sync` warns about such projects (details in
   [`thinking/2026-09-24-maruda-adoption/`](thinking/2026-09-24-maruda-adoption/)).
