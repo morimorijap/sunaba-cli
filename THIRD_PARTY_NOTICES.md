@@ -5,8 +5,9 @@ carries a header comment naming its upstream source. Credit does not
 imply that the upstream authors endorse `sunaba-cli`.
 
 Generated projects get their own copy of the relevant notices:
-`--stack secrets` emits `docs/secrets/THIRD_PARTY_NOTICES.md`, so the
-license travels with the adapted files it covers.
+`--stack secrets` emits `docs/secrets/THIRD_PARTY_NOTICES.md` and
+`--stack security-ci` emits `docs/security/THIRD_PARTY_NOTICES.md`, so
+the license travels with the adapted files it covers.
 
 ## northraystudio/maruda
 
@@ -14,7 +15,8 @@ license travels with the adapted files it covers.
 - Adapted from commit
   [`99dd7981e7947e4ae500225f811f5db0a03c3c7e`](https://github.com/northraystudio/maruda/tree/99dd7981e7947e4ae500225f811f5db0a03c3c7e)
   (2026-09-20)
-- Design record: [`thinking/2026-09-24-maruda-adoption/`](thinking/2026-09-24-maruda-adoption/)
+- Design records: [`thinking/2026-09-24-maruda-adoption/`](thinking/2026-09-24-maruda-adoption/),
+  [`thinking/2026-09-24-security-ci-gates/`](thinking/2026-09-24-security-ci-gates/)
 
 | sunaba file | Adapted from | What was taken |
 |---|---|---|
@@ -22,6 +24,9 @@ license travels with the adapted files it covers.
 | `src/sunaba_cli/templates/secrets/gitleaks.toml` | `harness/templates/github/gitleaks.toml` | `[extend] useDefault = true`; the "allowlist the smallest possible unit, never whole files or directories" policy |
 | `.github/workflows/ci.yml` (`gitleaks` job) | `harness/templates/github/security-scan.yml` (L22-43) | Same install step as above |
 | `tests/test_supply_chain.py` | `harness/tests/run.sh` (L248-264) | Auditing every `uses:` line for a 40-hex SHA pin, and a probe proving the audit rejects a mutable tag |
+| `src/sunaba_cli/templates/security-ci/github-workflow-security-scan.yml` (also `.github/workflows/security-scan.yml`) | `harness/templates/github/security-scan.yml` (L45-84) | Semgrep with `p/security-audit` + `p/owasp-top-ten`; Trivy fs scan of HIGH/CRITICAL with `--ignore-unfixed`, informational at first |
+| `src/sunaba_cli/templates/security-ci/scripts/protect-branch.sh` | `harness/scripts/setup.sh` (L881-918) | Making the security jobs required checks via `gh api`, with force push and deletion blocked and no admin bypass |
+| `src/sunaba_cli/templates/security-ci/docs/README.md` | `README.md` (L147-156) | The gate maturity ladder |
 
 ```
 MIT License

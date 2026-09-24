@@ -1,0 +1,1 @@
+- **security-ci**: Semgrep (SAST) and Trivy (dependency CVEs) run on every PR. Fix findings; never weaken or bypass a gate. See `docs/agents/security-ci.md`.

@@ -1,0 +1,9 @@
+{
+  "_description": "Security CI gates: Semgrep SAST (blocking) and Trivy dependency scan (warn, then block) on every PR, plus scripts/protect-branch.sh to make them required via a GitHub ruleset. Opt-in because it adds merge gates. Pairs with --stack secrets.",
+  "_files": {
+    ".github/workflows/security-scan.yml":  "security-ci/github-workflow-security-scan.yml",
+    "scripts/protect-branch.sh":            "security-ci/scripts/protect-branch.sh",
+    "docs/security/README.md":              "security-ci/docs/README.md",
+    "docs/security/THIRD_PARTY_NOTICES.md": "security-ci/docs/THIRD_PARTY_NOTICES.md"
+  }
+}

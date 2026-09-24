@@ -102,3 +102,23 @@ def test_own_ci_installs_the_same_gitleaks_as_the_template():
     for key in ("GITLEAKS_VERSION", "GITLEAKS_SHA256"):
         pattern = rf"{key}: (\S+)"
         assert re.search(pattern, own).group(1) == re.search(pattern, template).group(1), key
+
+
+_IMAGE = re.compile(r"^\s*image:\s*(\S+)\s*$", re.M)
+
+
+@pytest.mark.parametrize("name", sorted(_WORKFLOWS))
+def test_generated_workflow_container_images_are_digest_pinned(name):
+    """Tags on a registry are as mutable as action tags; Trivy's March 2026
+    compromise pushed malicious images under existing version tags, and
+    images referenced by digest were unaffected (GHSA-69fq-xp46-6x23)."""
+    for image in _IMAGE.findall(_WORKFLOWS[name]):
+        assert re.search(r"@sha256:[0-9a-f]{64}$", image), (name, image)
+
+
+def test_own_ci_installs_the_same_trivy_as_the_template():
+    template = _build_config_files("p", ["security-ci"])[".github/workflows/security-scan.yml"]
+    own = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text()
+    for key in ("TRIVY_VERSION", "TRIVY_SHA256"):
+        pattern = rf"{key}: (\S+)"
+        assert re.search(pattern, own).group(1) == re.search(pattern, template).group(1), key

@@ -89,8 +89,19 @@ The bar for landing a doc here:
   full history on push, fails closed when git errors (gitleaks#2129),
   and adds real-binary tests, a SHA-pin audit, and a `sunaba sync`
   warning for affected projects. Codex `gpt-5.5` and fugu
-  `fugu-ultra-v1.1` reviewed. Phases 2–3 (Semgrep /
-  Trivy / branch protection, security-review skills) are planned.
+  `fugu-ultra-v1.1` reviewed. Phase 2 is the next entry; Phase 3
+  (security-review skills) is planned.
+- [`2026-09-24-security-ci-gates/`](2026-09-24-security-ci-gates/) —
+  opt-in `--stack security-ci`: Semgrep SAST that actually blocks
+  (maruda's lacked `--error`), from a digest-pinned image; Trivy for
+  every lockfile type from a checksum- and Sigstore-verified binary
+  (after the March 2026 Trivy compromise), informational until the
+  `SUNABA_TRIVY_BLOCKING` repository variable is set; and
+  `scripts/protect-branch.sh`, which requires the checks through a
+  ruleset on the default and integration branches only after a
+  preflight shows they passed, bound to GitHub Actions. sunaba runs
+  the workflow on itself. fugu `fugu-ultra-v1.1` and Codex `gpt-5.5`
+  reviewed.
 
 ## Implementation order
 

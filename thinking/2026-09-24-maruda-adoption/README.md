@@ -22,7 +22,7 @@ fixes that first.
 |---|---|---|
 | **0** | This design folder | Done |
 | **1** | Harden `--stack secrets`: working config, a checksum-verified gitleaks binary instead of a license-gated action, SHA-pinned actions, per-event scan ranges, a fail-closed scan (gitleaks#2129), real-binary and real-workflow-script tests, SHA-pin audit, notices that travel with generated files, and the same treatment for sunaba's own CI | **Implemented** |
-| 2 | New opt-in security-CI stack: Semgrep (with `--error`), Trivy informational, npm/pnpm audit, strict CI preflights, and branch protection via `gh api` that also covers the integration branch | Planned (own `thinking/` folder) |
+| **2** | New opt-in `--stack security-ci`: Semgrep (with `--error`), Trivy (replacing npm/pnpm audit), and a rulesets helper that also covers integration branches. See [`2026-09-24-security-ci-gates/`](../2026-09-24-security-ci-gates/) | **Implemented** |
 | 3 | Skills: `vulnerability-scan` (automated + LLM manual OWASP review), `report-to-issues`; later `software-evaluation`, `spec-doc` | Planned |
 | 4 | Harness: PreToolUse bash guard (regex fixed, deny/allow matrix test), `.new` proposal files instead of overwrites, `settings.json` merge | Candidate |
 

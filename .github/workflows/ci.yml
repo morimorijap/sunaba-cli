@@ -70,3 +70,35 @@ jobs:
         env:
           SUNABA_REQUIRE_GITLEAKS: "1"
         run: uv run --with pytest --with click pytest tests/test_secrets.py -q -k "gitleaks_binary or workflow_scan"
+
+  # Runs the security-ci template's Trivy steps against the real, pinned
+  # binary (tests/test_security_ci.py -k real_trivy). The install step
+  # mirrors templates/security-ci/github-workflow-security-scan.yml.
+  trivy-contract:
+    name: Scanner contract tests (Trivy)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Trivy (pinned, SHA-256 verified)
+        env:
+          TRIVY_VERSION: 0.74.0
+          TRIVY_SHA256: 2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/trivy.tar.gz"
+          curl -sSfL --retry 3 --connect-timeout 10 --max-time 120 -o "$archive" \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  $archive" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/bin"
+          tar -xzf "$archive" -C "$RUNNER_TEMP/bin" trivy
+          "$RUNNER_TEMP/bin/trivy" --version | grep -qx "Version: ${TRIVY_VERSION}"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: Run Trivy-backed tests
+        env:
+          SUNABA_REQUIRE_TRIVY: "1"
+        run: uv run --with pytest --with click pytest tests/test_security_ci.py -q -k real_trivy

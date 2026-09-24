@@ -109,6 +109,7 @@ sunaba new local --stack python --no-devcontainer
 | `rules` | パススコープ付きルールを複数ターゲットに展開。`templates/rules/` のキャノニカル source 1 ファイルから `.cursor/rules/<name>.mdc`(Cursor の `globs:` / `alwaysApply:`)、`.claude/rules/<name>.md`(Claude の `paths:`)、`docs/agents/rules/<name>.md`(Codex / Gemini フォールバック)を生成。低リスクなコンテキスト改善で、ランタイム挙動は変わりません。 |
 | `autopilot` | Claude Code / Codex CLI 向けの opt-in な自走環境: budget cap (`SUNABA_AUTOPILOT_MAX_ITERS` / `_MINUTES` / `_CHANGED_FILES`)付き構造化 Stop hook 再起動、`.githooks/pre-push` によるブランチ保護、operational な planner / reviewer / verifier 役割定義(Claude `.claude/agents/*.md` + Codex `.codex/agents/*.toml`)、subagent dispatch protocol ドキュメント、`claudedocs/{plans,checkpoints}/`。**agent ランタイム挙動が変わる**(verifier 失敗時 Stop hook が再起動)。推奨呼び出し: `--stack harness --stack rules --stack autopilot` の順(autopilot の operational 役割定義が harness の seed を上書きするため)。Antigravity CLI(`agy`)の対応状況と注意点は `docs/agents/antigravity-autopilot.md` で扱う。 |
 | `multi-agent` | 並列エージェント協調オーケストレーション: `.agents/multi-agent/tasks.yaml` で `schema.json` 検証された共有タスクリスト、`owns:` ベースの hybrid 衝突回避(重複 → orchestrator が直列化)、デフォルト cohort cap 4(`SUNABA_MULTI_AGENT_MAX`)、`docs/multi-agent/sharding.md` の sharding フローチャート、`flock` 保護ヘルパースクリプト(`scripts/agent-task.py` の `claim` / `start` / `complete` / `fail` / `block` / `check-owns` / `overlap` サブコマンド)、scoped subagent プロンプトテンプレート。テンプレートのみ — 協調は **cooperative, not enforced**(ヘルパーが正しい操作を最も簡単にする;defense-in-depth は per-shard `git worktree` + autopilot のブランチ保護 + reviewer subagent)。`--stack autopilot` との併用推奨。 |
+| `security-ci` | セキュリティのマージゲート: `.github/workflows/security-scan.yml` で **Semgrep** の SAST(`p/security-audit` + `p/owasp-top-ten`、`--error` 付きで検出時にブロック、イメージはダイジェスト固定)と、あらゆるロックファイルを対象にした **Trivy** の依存関係スキャン(バイナリは SHA-256 検証、リポジトリ変数 `SUNABA_TRIVY_BLOCKING` を `true` にするまでは警告のみ)を実行します。`paths:` フィルタを使わないので、どちらも必須チェックにできます。`scripts/protect-branch.sh` は GitHub のルールセットで、デフォルトブランチと `--branch` で指定したブランチ(例: `staging`)にこれらを必須チェックとして設定します(そのブランチで一度成功してから)。成熟度の段階と、検出されたときの対処は `docs/security/` にあります。**マージゲートが増えるため opt-in。** `--stack secrets` と組み合わせて使う想定です。 |
 
 ## セキュリティについて (必読)
 
@@ -239,11 +240,13 @@ git push                   # SSH 経由で push できる
 ## 謝辞
 
 - 堅牢化した secret スキャンの workflow、`.gitleaks.toml` の運用方針、
-  SHA 固定を監査するテストは
+  SHA 固定を監査するテスト、`security-ci` のゲート構成、成熟度の段階、
+  ブランチ保護スクリプトは
   [northraystudio/maruda](https://github.com/northraystudio/maruda)
   (MIT, © 2026 NorthRay Studio株式会社) を元にしています。詳細は
   [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) と
-  [`thinking/2026-09-24-maruda-adoption/`](thinking/2026-09-24-maruda-adoption/) を参照してください。
+  [`thinking/2026-09-24-maruda-adoption/`](thinking/2026-09-24-maruda-adoption/)、
+  [`thinking/2026-09-24-security-ci-gates/`](thinking/2026-09-24-security-ci-gates/) を参照してください。
 
 ## ライセンス
 
