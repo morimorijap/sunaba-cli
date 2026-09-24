@@ -2,8 +2,15 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Release](https://img.shields.io/github/v/release/morimorijap/sunaba-cli)](https://github.com/morimorijap/sunaba-cli/releases)
+[![CI](https://github.com/morimorijap/sunaba-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/morimorijap/sunaba-cli/actions/workflows/ci.yml)
 
 > 日本語版は [README.ja.md](README.ja.md) にあります。
+
+> **0.3.0 (2026-09-24)** is the first tagged release. It fixes a
+> `--stack secrets` bug: the generated gitleaks config detected nothing.
+> If you used that stack before, see the [CHANGELOG](CHANGELOG.md#security).
+> It also adds opt-in Semgrep and Trivy merge gates (`--stack security-ci`).
 
 **One-command devcontainer sandboxes for AI agent development.**
 
@@ -27,6 +34,7 @@ agents pre-installed and pre-configured to talk to each other via MCP.
 - 🔌 **Composable** — mix and match stacks (`python`, `nextjs`, `aws`, `gcp`, …)
 - 🤖 **Agents talk to each other** — Claude Code can call Codex as an MCP sub-agent, and the Antigravity CLI (`agy`) headlessly
 - 🔐 **Opt-in secrets** — API keys only injected when you ask for them (`--stack agents`)
+- 🛡️ **Opt-in security gates** — secret scanning (`--stack secrets`), plus Semgrep SAST and Trivy dependency scanning that can block merges (`--stack security-ci`)
 - 📦 **Self-contained** — `uv tool install` gives you a global `sunaba` command
 
 ## Install
@@ -37,7 +45,13 @@ Requires [uv](https://docs.astral.sh/uv/):
 uv tool install git+https://github.com/morimorijap/sunaba-cli
 ```
 
-You now have a `sunaba` command on your PATH.
+You now have a `sunaba` command on your PATH (`sunaba --version`).
+
+To pin a release instead of tracking `main`:
+
+```bash
+uv tool install git+https://github.com/morimorijap/sunaba-cli@v0.3.0
+```
 
 ### Upgrade
 
@@ -91,7 +105,8 @@ the MCP runtime (`npx`, `uvx`), and stack-specific tools (e.g. `uv`, `aws`,
 | `sunaba register <path> --stack ...` | Add an existing project to the registry |
 | `sunaba list` | List registered projects |
 | `sunaba stacks` | Show available stacks |
-| `sunaba sync [<name>\|--all]` | Re-sync agent instruction files |
+| `sunaba sync [<name>\|--all]` | Re-sync agent instruction files (also warns about known-bad generated configs) |
+| `sunaba sync-gitignore <name\|path>` | Bring a project's `.gitignore` up to the current secret-file baseline, keeping your own lines |
 | `sunaba upgrade` | Update `sunaba-cli` itself |
 
 ## Stacks
@@ -138,6 +153,11 @@ sunaba new playground --stack python --stack nextjs --stack aws \
 
 # Host-only (no devcontainer) — just MCP + agent files on the host
 sunaba new local --stack python --no-devcontainer
+
+# Security gates: secret scanning + Semgrep + Trivy, then make them required
+sunaba new secured --stack python --stack secrets --stack security-ci
+#   push, let the checks pass on the default branch, then:
+#   scripts/protect-branch.sh --dry-run && scripts/protect-branch.sh
 ```
 
 ## Rebuild: change stacks after the fact
@@ -247,6 +267,13 @@ before using `sunaba-cli` on sensitive work.
   when a `package-lock.json` exists. `uv sync --frozen` only runs when a
   `pyproject.toml` exists. No silent fallbacks to unpinned installs.
 - **`uv` is installed via `pip`** — avoids piping a remote shell script.
+- **Pinned, verified scanners** — the CI templates pin every GitHub Action
+  to a commit SHA, the Semgrep image by digest, and the gitleaks and Trivy
+  binaries by version and SHA-256. Every scanner failure fails the job.
+  After the March 2026 Trivy compromise
+  ([GHSA-69fq-xp46-6x23](https://github.com/aquasecurity/trivy/security/advisories/GHSA-69fq-xp46-6x23)),
+  the templates use no scanner actions or mutable tags. sunaba runs the
+  same gates on itself.
 
 ### What `sunaba-cli` does NOT protect you from
 
@@ -265,6 +292,12 @@ before using `sunaba-cli` on sensitive work.
 - **Your own prompts**: `sunaba-cli` does not sandbox the AI agents
   themselves. An agent can still `rm -rf` files inside the container, commit
   and push secrets, etc. The sandbox protects your host, not your repo.
+- **Security gates are not a guarantee**: `--stack security-ci` catches
+  known patterns (Semgrep) and published advisories in lockfiles (Trivy).
+  It does not find authorization or business-logic flaws. It blocks
+  merges only once `scripts/protect-branch.sh` makes the checks required,
+  which needs a public repository or a paid GitHub plan. See
+  [SECURITY.md](SECURITY.md#merge-gates).
 - **`--stack harness`**: ships a Claude Code Stop hook that runs
   `bash .claude/hooks/verify.sh` after every agent session. The hook is a
   template — review it like code. It can run any local command. The
@@ -351,30 +384,34 @@ Larger design changes are worked through in the open under
 self-contained set of notes (current state → research → independent
 LLM reviews → synthesized proposal) covering one area of the project.
 
-Drafts in flight as of 2026-05:
+Shipped designs, in landing order:
 
-- [`thinking/2026-05-09-harness-engineering/`](thinking/2026-05-09-harness-engineering/) —
-  applying harness-engineering principles (OpenAI / Martin Fowler /
-  HumanLayer / Addy Osmani / Red Hat) to the generated agent
-  scaffolding. Introduces `--stack harness` and the `_files`
-  template-emission mechanism that subsequent proposals build on.
-- [`thinking/2026-05-09-stack-aware-agent-files/`](thinking/2026-05-09-stack-aware-agent-files/) —
-  making the generated `AGENTS.md` / `CLAUDE.md` /
-  `skills.md` reflect the stacks the user actually selected, with
-  per-stack fragments and a registry-flagged sync mode.
-- [`thinking/2026-05-09-secrets-management/`](thinking/2026-05-09-secrets-management/) —
-  expanded `.gitignore` baseline, opt-in `--stack secrets` (gitleaks
-  pre-commit + per-cloud docs), and the Azure
-  Foundry → APIM → Gemini → Cosmos "key behind a proxy" pattern.
-- [`thinking/2026-05-09-rules-and-autonomy/`](thinking/2026-05-09-rules-and-autonomy/) —
-  multi-target path-scoped rules (`--stack rules`) and an opt-in
-  autonomous environment (`--stack autopilot`) with structured
-  Stop-hook re-engage, budget caps, and a subagent dispatch protocol.
+- [`thinking/2026-05-09-harness-engineering/`](thinking/2026-05-09-harness-engineering/):
+  `--stack harness` and the `_files` template-emission mechanism.
+- [`thinking/2026-05-09-stack-aware-agent-files/`](thinking/2026-05-09-stack-aware-agent-files/):
+  per-stack `AGENTS.md` / `CLAUDE.md` / `skills.md` and a registry-flagged
+  sync mode.
+- [`thinking/2026-05-09-secrets-management/`](thinking/2026-05-09-secrets-management/):
+  the `.gitignore` baseline, `--stack secrets`, and the Azure Foundry → APIM
+  → Gemini → Cosmos "key behind a proxy" pattern.
+- [`thinking/2026-05-09-rules-and-autonomy/`](thinking/2026-05-09-rules-and-autonomy/):
+  `--stack rules` and `--stack autopilot`.
+- [`thinking/2026-05-09-multi-agent-orchestration/`](thinking/2026-05-09-multi-agent-orchestration/):
+  `--stack multi-agent`.
+- [`thinking/2026-06-07-antigravity-cli-migration/`](thinking/2026-06-07-antigravity-cli-migration/):
+  moving from Gemini CLI to the Antigravity CLI (`agy`).
+- [`thinking/2026-09-24-maruda-adoption/`](thinking/2026-09-24-maruda-adoption/):
+  the `--stack secrets` detection fix and the gitleaks hardening (0.3.0).
+- [`thinking/2026-09-24-security-ci-gates/`](thinking/2026-09-24-security-ci-gates/):
+  `--stack security-ci` and `scripts/protect-branch.sh` (0.3.0).
 
-These are **drafts under review**, not shipped features. The shape
-is intentional: docs land first so the design can be argued with
-before implementation. See [`thinking/README.md`](thinking/README.md)
-for the implementation order and how the proposals interact.
+Still design notes, not implemented:
+[`2026-05-22-e2e-evidence-artifacts/`](thinking/2026-05-22-e2e-evidence-artifacts/)
+and the
+[enterprise-development essay](thinking/2026-05-26-enterprise-development-improvements/).
+Next up is Phase 3 of the maruda adoption: LLM security-review skills.
+The full index is in [`thinking/README.md`](thinking/README.md), and
+release history is in [CHANGELOG.md](CHANGELOG.md).
 
 ## Acknowledgements
 

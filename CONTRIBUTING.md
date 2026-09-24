@@ -45,10 +45,26 @@ src/sunaba_cli/
 
 1. Create `src/sunaba_cli/templates/stacks/<name>.json`
 2. Fill in `_description`, any `features`, `remoteEnv`, `customizations`,
-   and `_bootstrap` (list of bash lines)
+   and `_bootstrap` (list of bash lines). Files the stack writes into the
+   project go in `_files` (destination → template path, copied verbatim),
+   and agent guidance in `templates/agents/fragments/<name>/`
 3. Run `uv run sunaba stacks` to confirm it shows up
 4. Test with `uv run sunaba new testproj --stack <name>`
 5. Inspect the generated `.devcontainer/` and `bootstrap.sh`
+6. Add tests under `tests/` (see `tests/test_security_ci.py` for the
+   pattern: assert on generated text, and execute generated scripts
+   against fake binaries). Generated GitHub workflows must pin actions to
+   commit SHAs and images to digests; `tests/test_supply_chain.py`
+   enforces it
+7. For non-trivial stacks, write the design first under `thinking/`
+
+## Releases
+
+1. Bump `version` in `pyproject.toml` and `@click.version_option` in
+   `src/sunaba_cli/cli.py`, then run `uv lock`.
+2. Add a section to [CHANGELOG.md](CHANGELOG.md).
+3. After the PR merges, tag the merge commit `vX.Y.Z` and publish a
+   GitHub release with the changelog section.
 
 ## Code style
 
