@@ -124,6 +124,21 @@ def test_rules_stack_emits_seed_rules():
     assert ".claude/rules/nextjs-api.md" in files
 
 
+def test_nextjs_api_rule_keeps_privilege_fields_server_side():
+    """Mass assignment / client-supplied roles: the rule must say where
+    privilege and ownership fields come from, in every rendered target."""
+    files = _build_config_files("p", ["rules"])
+    for path in (
+        ".cursor/rules/nextjs-api.mdc",
+        ".claude/rules/nextjs-api.md",
+        "docs/agents/rules/nextjs-api.md",
+    ):
+        body = files[path]
+        assert "ownerId" in body, path
+        assert "mass assignment" in body, path
+        assert "JWT claims" in body, path
+
+
 def test_rules_stack_idempotent():
     a = _build_config_files("p", ["rules"])
     b = _build_config_files("p", ["rules"])
