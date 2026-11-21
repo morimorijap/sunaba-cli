@@ -1,6 +1,6 @@
 # Following up on maruda and sakuda (2026-09-20 → 2026-11-21)
 
-> Status: **three PRs open** (#30, #31, this one). Started 2026-11-21.
+> Status: **three PRs open** (#30, #31, #32). Started 2026-11-21.
 > Follows [`2026-09-24-maruda-adoption/`](../2026-09-24-maruda-adoption/)
 > and [`2026-09-24-security-ci-gates/`](../2026-09-24-security-ci-gates/).
 
@@ -27,7 +27,7 @@ three edits it and they do not conflict.
 |---|---|---|---|
 | #30 `fix(base)` | `sunaba new` writes `.gitattributes` pinning scripts to LF; sunaba's own repo gets one too | sakuda#85 (idea only) | A Windows clone with `core.autocrlf=true` checks the generated `*.sh`, hooks and `.githooks/pre-push` out with CRLF, and they fail in the Linux container. Affects every project, so it is a fix on its own |
 | #31 `docs(rules)` | `nextjs-api` rule and the nextjs guidance: privilege and ownership fields come from the session, never the request; no `data: body`; no authorization from JWT claims alone | maruda#25 (idea; own wording) | "Validate the body" does not stop mass assignment when the schema accepts `role` or `ownerId`. Documentation only |
-| this `feat(security-ci)` | Project Semgrep rules in `.semgrep/` join the `SAST (Semgrep)` job when a rule file exists; fixtures are excluded | maruda#27, #37, `docs/semgrep-rules.md` | Lets a project turn a confirmed finding into a rule that blocks regressions, with no workflow edit |
+| #32 `feat(security-ci)` | Project Semgrep rules in `.semgrep/` join the `SAST (Semgrep)` job when a rule file exists; fixtures are excluded | maruda#27, #37, `docs/semgrep-rules.md` | Lets a project turn a confirmed finding into a rule that blocks regressions, with no workflow edit |
 
 ### How the security-ci change differs from maruda
 
