@@ -7,11 +7,13 @@ authors endorse this project or `sunaba-cli`.
 ## northraystudio/maruda
 
 - Repository: <https://github.com/northraystudio/maruda>
-- Commit: `99dd7981e7947e4ae500225f811f5db0a03c3c7e`
+- Commits: `99dd7981e7947e4ae500225f811f5db0a03c3c7e`, and
+  `5f9b323ccb69d325677006c00643b4dc08699a00` for the project-rules check
 
 | Generated file | Upstream file |
 |---|---|
-| `.github/workflows/security-scan.yml` | `harness/templates/github/security-scan.yml` (L45-84) |
+| `.github/workflows/security-scan.yml` | `harness/templates/github/security-scan.yml` (L45-84 at `99dd798`; L80-88 at `5f9b323`, project-rules check) |
+| `docs/security/README.md` ("Project rules") | `docs/semgrep-rules.md` at `5f9b323` (conventions: one rule per fixture, the has-rules check, what is not a rule) |
 | `scripts/protect-branch.sh` | `harness/scripts/setup.sh` (L881-918, `--protect`) |
 | `docs/security/README.md` (maturity ladder) | `README.md` (L147-156, "Gate maturity ladder") |
 

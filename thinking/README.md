@@ -102,6 +102,14 @@ The bar for landing a doc here:
   preflight shows they passed, bound to GitHub Actions. sunaba runs
   the workflow on itself. fugu `fugu-ultra-v1.1` and Codex `gpt-5.5`
   reviewed.
+- [`2026-11-21-maruda-followup/`](2026-11-21-maruda-followup/) —
+  what changed in maruda (to 0.4.6) and sakuda since the adoption, and
+  what sunaba takes: LF-pinned scripts in generated projects, guidance
+  against mass assignment in the Next.js rules, and project Semgrep
+  rules in `.semgrep/` for the security-ci gate (fixtures excluded with
+  `--exclude`, not a generated `.semgrepignore`). Records why maruda's
+  shared mass-assignment rule is not bundled, and what to start
+  Phases 3–4 from.
 
 ## Implementation order
 
