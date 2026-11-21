@@ -771,6 +771,13 @@ def new(
 
     (project_dir / ".gitignore").write_text(_default_gitignore())
 
+    # LF for scripts that run in the Linux container — written on project
+    # creation only, like SECURITY.md, so user patterns survive rebuilds.
+    gitattributes_template = TEMPLATES_DIR / "base" / "gitattributes"
+    if gitattributes_template.exists():
+        (project_dir / ".gitattributes").write_text(gitattributes_template.read_text())
+        click.echo("  Created .gitattributes")
+
     # Generic SECURITY.md scaffold — written on project creation only.
     # `sunaba rebuild` deliberately leaves it alone so user edits to the
     # report channel, scope statement, etc. survive across rebuilds.

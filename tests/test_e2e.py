@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -646,6 +647,77 @@ def test_rebuild_does_not_overwrite_security_md(tmp_path, isolated_registry):
     assert (project / "SECURITY.md").read_text() == (
         "# Custom security policy\nreport here\n"
     )
+
+
+def test_sunaba_new_keeps_scripts_lf_under_autocrlf(tmp_path, isolated_registry):
+    """A Windows-style clone (core.autocrlf=true) must still check generated
+    scripts out with LF; with CRLF they fail inside the Linux container.
+    Exercised with real git: commit, delete, check out again, read bytes.
+    """
+    if shutil.which("git") is None:
+        pytest.skip("git not installed")
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    r = _run(
+        [
+            "new", "lf",
+            "--stack", "python",
+            "--stack", "autopilot",
+            "--stack", "multi-agent",
+            "--stack", "security-ci",
+            "--no-prompt",
+        ],
+        cwd=workspace,
+    )
+    assert r.returncode == 0, r.stderr
+    project = workspace / "lf"
+    assert (project / ".gitattributes").is_file()
+
+    scripts = [
+        ".devcontainer/bootstrap.sh",
+        ".claude/hooks/verify.sh",
+        # .codex/hooks/verify.sh is generated too, but the baseline
+        # .gitignore excludes .codex/, so git never checks it out.
+        ".githooks/pre-push",
+        "scripts/install-githooks.sh",
+        "scripts/agent-task.py",
+        "scripts/protect-branch.sh",
+    ]
+    for rel in scripts:
+        assert (project / rel).is_file(), f"stack layout changed: {rel} missing"
+
+    def git(*args: str) -> None:
+        subprocess.run(
+            ["git", "-c", "core.autocrlf=true", "-c", "user.name=t",
+             "-c", "user.email=t@example.invalid", "-c", "commit.gpgsign=false",
+             *args],
+            cwd=project, check=True, capture_output=True,
+        )
+
+    git("init", "-q")
+    git("add", "-A")
+    git("commit", "-q", "-m", "init")
+    for rel in scripts:
+        (project / rel).unlink()
+    git("checkout", "--", ".")
+    for rel in scripts:
+        assert b"\r\n" not in (project / rel).read_bytes(), f"{rel} checked out with CRLF"
+
+
+def test_rebuild_does_not_overwrite_gitattributes(tmp_path, isolated_registry):
+    """`.gitattributes` is `new`-only, like SECURITY.md: user patterns survive."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    r1 = _run(
+        ["new", "garb", "--stack", "python", "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert r1.returncode == 0, r1.stderr
+    project = workspace / "garb"
+    (project / ".gitattributes").write_text("*.png binary\n")
+    r2 = _run(["rebuild", "garb", "--add", "secrets", "--yes"], cwd=workspace)
+    assert r2.returncode == 0, f"stderr: {r2.stderr}\nstdout: {r2.stdout}"
+    assert (project / ".gitattributes").read_text() == "*.png binary\n"
 
 
 def test_legacy_static_mode_uses_verbatim_copy(tmp_path, isolated_registry):
