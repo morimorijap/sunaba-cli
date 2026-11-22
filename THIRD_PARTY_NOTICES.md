@@ -14,9 +14,12 @@ the license travels with the adapted files it covers.
 - Repository: <https://github.com/northraystudio/maruda>
 - Adapted from commit
   [`99dd7981e7947e4ae500225f811f5db0a03c3c7e`](https://github.com/northraystudio/maruda/tree/99dd7981e7947e4ae500225f811f5db0a03c3c7e)
-  (2026-09-20)
+  (2026-09-20); the `.semgrep/` project-rules check and conventions from
+  [`5f9b323ccb69d325677006c00643b4dc08699a00`](https://github.com/northraystudio/maruda/tree/5f9b323ccb69d325677006c00643b4dc08699a00)
+  (2026-11-07)
 - Design records: [`thinking/2026-09-24-maruda-adoption/`](thinking/2026-09-24-maruda-adoption/),
-  [`thinking/2026-09-24-security-ci-gates/`](thinking/2026-09-24-security-ci-gates/)
+  [`thinking/2026-09-24-security-ci-gates/`](thinking/2026-09-24-security-ci-gates/),
+  [`thinking/2026-11-21-maruda-followup/`](thinking/2026-11-21-maruda-followup/)
 
 | sunaba file | Adapted from | What was taken |
 |---|---|---|
@@ -27,6 +30,8 @@ the license travels with the adapted files it covers.
 | `src/sunaba_cli/templates/security-ci/github-workflow-security-scan.yml` (also `.github/workflows/security-scan.yml`) | `harness/templates/github/security-scan.yml` (L45-84) | Semgrep with `p/security-audit` + `p/owasp-top-ten`; Trivy fs scan of HIGH/CRITICAL with `--ignore-unfixed`, informational at first |
 | `src/sunaba_cli/templates/security-ci/scripts/protect-branch.sh` | `harness/scripts/setup.sh` (L881-918) | Making the security jobs required checks via `gh api`, with force push and deletion blocked and no admin bypass |
 | `src/sunaba_cli/templates/security-ci/docs/README.md` | `README.md` (L147-156) | The gate maturity ladder |
+| `src/sunaba_cli/templates/security-ci/github-workflow-security-scan.yml` (also `.github/workflows/security-scan.yml`), at `5f9b323` | `harness/templates/github/security-scan.yml` (L80-88) | Passing `--config .semgrep` only when it holds a rule file that is not a `*.test.yml` / `*.test.yaml` fixture |
+| `src/sunaba_cli/templates/security-ci/docs/README.md` ("Project rules"), at `5f9b323` | `docs/semgrep-rules.md` | One rule per `semgrep --test` fixture; YAML fixtures named `*.test.yaml`; standard `metadata:` keys; authorization and business logic are not rules |
 
 ```
 MIT License

@@ -319,6 +319,175 @@ def test_real_trivy_clean_lockfile_passes(tmp_path):
     assert "Dependency files scanned: 1" in (tmp_path / "summary.md").read_text()
 
 
+# --- Semgrep project rules (.semgrep/) --------------------------------------
+
+_FAKE_SEMGREP = """#!/bin/sh
+printf '%s\\n' "$@" > "$FAKE_SEMGREP_ARGS"
+exit "${FAKE_SEMGREP_EXIT:-0}"
+"""
+
+_RULE = """rules:
+  - id: no-eval
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: eval on input
+    pattern: eval($X)
+"""
+
+
+def _layout(root: Path, files: dict[str, str]) -> None:
+    for rel, text in files.items():
+        target = root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text)
+
+
+def _run_fake_semgrep(tmp_path: Path, files: dict[str, str], exit_code: int = 0):
+    work = tmp_path / "proj"
+    work.mkdir()
+    _layout(work, files)
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    exe = fake_bin / "semgrep"
+    exe.write_text(_FAKE_SEMGREP)
+    exe.chmod(exe.stat().st_mode | stat.S_IEXEC)
+    args_file = tmp_path / "args"
+    r = subprocess.run(
+        ["bash", "-c", _step_script(_workflow(), "Scan")],
+        cwd=work, capture_output=True, text=True,
+        env={
+            "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+            "FAKE_SEMGREP_ARGS": str(args_file),
+            "FAKE_SEMGREP_EXIT": str(exit_code),
+        },
+    )
+    return r, args_file.read_text().splitlines()
+
+
+def _uses_project_rules(args: list[str]) -> bool:
+    return any(a == "--config" and b == ".semgrep" for a, b in zip(args, args[1:]))
+
+
+@pytest.mark.parametrize(
+    "files,want_rules",
+    [
+        ({}, False),
+        ({".semgrep/README.md": "notes"}, False),
+        # Fixtures only: Semgrep's loader skips *.test.yml, and a
+        # `--config` directory without rules exits 7.
+        ({".semgrep/rules/x.ts": "eval(a)", ".semgrep/rules/x.test.yml": "a: b"}, False),
+        ({".semgrep/rules/no-eval.yml": _RULE}, True),
+        ({".semgrep/rules/no-eval.yaml": _RULE}, True),
+        ({".semgrep/team/deep/no-eval.yml": _RULE}, True),
+    ],
+)
+def test_project_rules_join_only_when_a_rule_file_exists(tmp_path, files, want_rules):
+    r, args = _run_fake_semgrep(tmp_path, files)
+    assert r.returncode == 0, r.stderr
+    assert _uses_project_rules(args) is want_rules, args
+    # Registry rules and the gate flags never depend on the project rules.
+    assert args[:3] == ["scan", "--error", "--metrics=off"]
+    assert "p/security-audit" in args and "p/owasp-top-ten" in args
+    # Fixtures stay out of the results whether or not rules exist, without
+    # a .semgrepignore that would replace Semgrep's default ignore list.
+    assert args[-3:] == ["--exclude", ".semgrep", "."]
+
+
+@pytest.mark.parametrize("code", [1, 2, 7])
+def test_scan_step_propagates_semgrep_failures(tmp_path, code):
+    r, _ = _run_fake_semgrep(tmp_path, {".semgrep/rules/no-eval.yml": _RULE}, exit_code=code)
+    assert r.returncode == code
+
+
+# Real-binary contract for the same step, against the image the workflow
+# pins. Needs network for the registry rules. Runs when `semgrep` is on PATH,
+# or through Docker with SUNABA_SEMGREP_VIA_DOCKER=1; SUNABA_REQUIRE_SEMGREP=1
+# (set in sunaba's CI) turns a skip into a failure.
+
+_SEMGREP = shutil.which("semgrep")
+_SEMGREP_VIA_DOCKER = (
+    _SEMGREP is None
+    and os.environ.get("SUNABA_SEMGREP_VIA_DOCKER") == "1"
+    and shutil.which("docker") is not None
+)
+_needs_semgrep = pytest.mark.skipif(
+    _SEMGREP is None and not _SEMGREP_VIA_DOCKER
+    and os.environ.get("SUNABA_REQUIRE_SEMGREP") != "1",
+    reason="semgrep not on PATH (or set SUNABA_SEMGREP_VIA_DOCKER=1)",
+)
+
+
+def _semgrep_bin(tmp_path: Path) -> Path:
+    if _SEMGREP:
+        return Path(_SEMGREP).parent
+    assert _SEMGREP_VIA_DOCKER, "SUNABA_REQUIRE_SEMGREP=1 but no semgrep and no Docker"
+    image = re.search(r"image: (semgrep/semgrep:\S+@sha256:[0-9a-f]{64})\n", _workflow()).group(1)
+    wrapper = tmp_path / "bin" / "semgrep"
+    wrapper.parent.mkdir()
+    wrapper.write_text(
+        "#!/bin/sh\n"
+        f'exec docker run --rm -v "$PWD:/src" -w /src {image} semgrep "$@"\n'
+    )
+    wrapper.chmod(wrapper.stat().st_mode | stat.S_IEXEC)
+    return wrapper.parent
+
+
+def _run_real_semgrep(tmp_path: Path, files: dict[str, str]) -> subprocess.CompletedProcess:
+    work = tmp_path / "proj"
+    work.mkdir()
+    _layout(work, files)
+    env = {
+        "PATH": f"{_semgrep_bin(tmp_path)}{os.pathsep}{os.environ['PATH']}",
+        "HOME": os.environ.get("HOME", str(tmp_path)),
+    }
+    return subprocess.run(["bash", "-c", _step_script(_workflow(), "Scan")], cwd=work,
+                          capture_output=True, text=True, env=env, timeout=600)
+
+
+_FIXTURE = "// ruleid: no-eval\neval(a);\n"
+
+
+@_needs_semgrep
+def test_real_semgrep_project_rule_blocks_app_code(tmp_path):
+    r = _run_real_semgrep(tmp_path, {
+        ".semgrep/rules/no-eval.yml": _RULE,
+        ".semgrep/rules/no-eval.ts": _FIXTURE,
+        "src/app.ts": "export const run = (s: string) => eval(s);\n",
+    })
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "no-eval" in r.stdout
+    assert "src/app.ts" in r.stdout
+    assert ".semgrep/rules/no-eval.ts" not in r.stdout
+
+
+@_needs_semgrep
+def test_real_semgrep_fixtures_alone_do_not_fail_the_gate(tmp_path):
+    r = _run_real_semgrep(tmp_path, {
+        ".semgrep/rules/no-eval.yml": _RULE,
+        ".semgrep/rules/no-eval.ts": _FIXTURE,
+        "src/app.ts": "export const ok = 1;\n",
+    })
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+@_needs_semgrep
+def test_real_semgrep_without_rule_files_runs_the_registry_scan(tmp_path):
+    r = _run_real_semgrep(tmp_path, {
+        ".semgrep/rules/no-eval.ts": _FIXTURE,
+        "src/app.ts": "export const ok = 1;\n",
+    })
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+@_needs_semgrep
+def test_real_semgrep_broken_rule_fails_closed(tmp_path):
+    r = _run_real_semgrep(tmp_path, {
+        ".semgrep/rules/broken.yml": "rules:\n  - id: broken\n    pattern: [\n",
+        "src/app.ts": "export const ok = 1;\n",
+    })
+    assert r.returncode not in (0, 1), r.stdout + r.stderr
+
+
 # --- protect-branch.sh -----------------------------------------------------
 
 

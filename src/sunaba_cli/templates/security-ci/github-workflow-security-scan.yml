@@ -10,8 +10,11 @@
 # replaces the npm/pnpm audit job. Informational mode is a green,
 # annotated job instead of `continue-on-error`, so it can be a required
 # check from day one; the mode lives in a repository variable. Unknown exit
-# codes fail closed. The MIT license
-# notice is in docs/security/THIRD_PARTY_NOTICES.md.
+# codes fail closed. Project rules in .semgrep/ join the scan when present
+# (the has-rules check follows maruda at 5f9b323,
+# harness/templates/github/security-scan.yml#L80-L88; sunaba excludes the
+# rule fixtures with --exclude instead of a generated .semgrepignore).
+# The MIT license notice is in docs/security/THIRD_PARTY_NOTICES.md.
 #
 # No `paths:` filters on purpose: a required check whose workflow is
 # skipped stays "Pending" and blocks the merge.
@@ -53,10 +56,24 @@ jobs:
         # Exit 0: clean. 1: findings (blocks). 2+: Semgrep failed (blocks).
         # For a false positive, add `# nosemgrep: <rule-id>` with a reason on
         # that line; never exclude whole source directories.
+        #
+        # Project rules in .semgrep/ (docs/security/README.md, "Project
+        # rules") join only when a rule file exists: Semgrep exits 7 on a
+        # --config directory with none. Its loader skips *.test.yml /
+        # *.test.yaml fixtures, so they do not count. --exclude keeps the
+        # intentionally vulnerable fixtures next to the rules out of the
+        # results without replacing Semgrep's default ignore list.
         run: |
+          set --
+          if find .semgrep -type f \( -name '*.yml' -o -name '*.yaml' \) \
+              ! -name '*.test.yml' ! -name '*.test.yaml' 2>/dev/null | grep -q .; then
+            set -- --config .semgrep
+          fi
           semgrep scan --error --metrics=off \
             --config p/security-audit \
             --config p/owasp-top-ten \
+            "$@" \
+            --exclude .semgrep \
             .
 
   trivy:

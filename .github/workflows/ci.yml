@@ -102,3 +102,24 @@ jobs:
         env:
           SUNABA_REQUIRE_TRIVY: "1"
         run: uv run --with pytest --with click pytest tests/test_security_ci.py -q -k real_trivy
+
+  # Runs the security-ci template's Semgrep "Scan" step against the image
+  # the template pins (tests/test_security_ci.py -k real_semgrep): project
+  # rules in .semgrep/ block, their fixtures are excluded, a broken rule
+  # fails closed. The tests read the image digest from the template and run
+  # it through Docker, so there is no second pin to keep in sync.
+  semgrep-contract:
+    name: Scanner contract tests (Semgrep)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: Run Semgrep-backed tests
+        env:
+          SUNABA_SEMGREP_VIA_DOCKER: "1"
+          SUNABA_REQUIRE_SEMGREP: "1"
+        run: uv run --with pytest --with click pytest tests/test_security_ci.py -q -k real_semgrep
