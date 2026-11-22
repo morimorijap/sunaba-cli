@@ -16,6 +16,10 @@ npm run build             # production build
 - Server-only env vars (database URLs, API keys) stay server-only.
   Only variables prefixed `NEXT_PUBLIC_` are exposed to the browser.
   **Never** put a secret behind `NEXT_PUBLIC_*`.
+- API routes and Server Actions take `role`, `userId`, `ownerId`,
+  prices and similar fields from the session on the server, never from
+  the request. Write only explicitly picked fields to the database
+  (no `data: body`).
 - Use `vercel env pull .env.local` to sync env vars from Vercel for
   local dev. The resulting `.env.local` stays untracked.
 - Re-deploy after changing Vercel env vars; otherwise the build
