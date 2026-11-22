@@ -1,6 +1,6 @@
 # Following up on maruda and sakuda (2026-09-20 → 2026-11-21)
 
-> Status: **three PRs open** (#30, #31, #32). Started 2026-11-21.
+> Status: #30, #31, #32 merged; Phase 4a (bash guard) in review. Started 2026-11-21.
 > Follows [`2026-09-24-maruda-adoption/`](../2026-09-24-maruda-adoption/)
 > and [`2026-09-24-security-ci-gates/`](../2026-09-24-security-ci-gates/).
 
@@ -74,11 +74,46 @@ Considered bundling it into `.semgrep/` of generated projects. Left out:
 The docs explain how to write such a rule; #31 covers the same risk as
 guidance. Revisit if sunaba gains an Express stack.
 
+## Phase 4a: the bash guard (taken after #32)
+
+`--stack harness` now ships `.claude/hooks/pre-bash-guard.sh`, adapted
+from maruda `5f9b323` (maruda#15). sunaba's prefix-matched
+`permissions.deny` rules missed `rm -fr /` and
+`git push origin main --force`; the guard reads arguments instead, and
+the deny rules stay as a second layer.
+
+Changes from maruda:
+
+- A Codex CLI review (`codex exec`, read-only) of the staged diff found
+  two bypasses, both present upstream and both fixed here:
+  - `rm -fr \<newline>/`: the guard cut at the newline, bash joins the
+    line continuation. Continuations are joined before parsing.
+  - `git push origin --mirror`, `git push --force origin --all`: these
+    force-update `main` without naming it. `--mirror` counts as a forced
+    push to main; `--all` / `--branches` count as naming main.
+- The same review caught a regression in this PR's first draft: running
+  the Stop hook as `cd "$CLAUDE_PROJECT_DIR" && …` would verify the
+  original checkout while the agent works in a worktree. The Stop hook
+  keeps its relative path. Only the guard uses `$CLAUDE_PROJECT_DIR`,
+  because it is stateless and a relative path stops resolving once the
+  agent `cd`s into a subdirectory (a hook that cannot start blocks
+  nothing).
+- maruda's setup-toggled pip block is dropped; a missing `jq` is
+  reported on stderr (the devcontainer image ships jq 1.6).
+- The deny/allow matrix moves to pytest and runs under `/bin/bash`
+  (3.2 on macOS, for `--no-devcontainer`) and the `bash` on PATH; it was
+  also run under the devcontainer image's bash 5.1.
+
+Worth reporting upstream: the two bypasses.
+
+Still Phase 4b: `rebuild` overwrites a user-edited
+`.claude/settings.json` (and every other stack file) after one
+confirmation. Proposal files (`.new`) and a settings merge come next.
+
 ## Not taken now
 
 | Item | Upstream | Reason |
 |---|---|---|
-| PreToolUse bash guard rewritten to parse `rm` / `git push` arguments, with the old regexes as a floor and a deny/allow test matrix | maruda#15 | Belongs to Phase 4. sunaba's `harness` stack uses prefix-matched permission denies (`Bash(rm -rf:*)`, `Bash(git push --force:*)`), which likely miss `rm -fr /` or `git push origin main --force`. maruda's design is the reference when Phase 4 starts |
 | `vulnerability-scan` rework: evidence principle ("a check that exists is not a check that enforces"), *Requires Runtime Verification*, CSRF / upload / auth flow / anti-automation / race checks; dependency audit split into `dependency-audit` (lockfile ownership per workspace, "not run" never counted as 0, opt-in SBOM) | maruda#30, #40–#58 | Phase 3 (skills) has not started. Start it from `5f9b323`, not `99dd798` |
 | `rule-proposer` (finding → Semgrep rule + fixture, measured for false positives) | maruda#28 | Phase 3. This PR's `.semgrep/` convention is what it would write to |
 | `sakuda-triage`, a `--stack dast` wiring sakuda's MCP | maruda#29, sakuda#18/#46 | sakuda's `/mcp` answers loopback only. From inside a devcontainer, `127.0.0.1` is the container, and `SAKUDA_ALLOWED_HOSTS` does not apply to `/mcp`. Not usable from a sandbox until sakuda allows it |

@@ -122,7 +122,7 @@ the MCP runtime (`npx`, `uvx`), and stack-specific tools (e.g. `uv`, `aws`,
 | `agents` | Injects `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` from host |
 | `docker` | `docker-outside-of-docker` (access host Docker daemon) |
 | `playwright` | Chromium + Linux deps for Playwright / Chrome DevTools MCP (E2E browser automation) |
-| `harness` | Claude Code-oriented harness templates: `.claude/settings.json` (permissions + Stop hook), a silent-on-success `verify.sh`, on-demand skills, planner / reviewer / verifier sub-agent role files, a 60-line ratchet `AGENTS.md`, and a `claudedocs/` trace directory. **Opt-in because it changes agent behavior at session boundaries.** |
+| `harness` | Claude Code-oriented harness templates: `.claude/settings.json` (permissions, a PreToolUse guard that denies destructive shell commands, Stop hook), a silent-on-success `verify.sh`, on-demand skills, planner / reviewer / verifier sub-agent role files, a 60-line ratchet `AGENTS.md`, and a `claudedocs/` trace directory. **Opt-in because it changes agent behavior at session boundaries.** |
 | `secrets` | Secret hygiene scaffold: `.pre-commit-config.yaml` with `gitleaks` (frozen to a release commit), a `.gitleaks.toml` that extends gitleaks' default rules, a CI scan workflow (SHA-pinned actions, checksum-verified gitleaks, full-history scan), and per-cloud docs in `docs/secrets/` (Vercel · Firebase · AWS · GCP · Azure Foundry → APIM → Gemini → Cosmos). **Opt-in because it changes commit-time behavior** (`git commit` is blocked when a secret is detected). |
 | `rules` | Multi-target path-scoped rule files. One canonical source under `templates/rules/` renders to `.cursor/rules/<name>.mdc` (Cursor `globs:` / `alwaysApply:`), `.claude/rules/<name>.md` (Claude `paths:`), and `docs/agents/rules/<name>.md` (Codex / Gemini fallback). Low-risk context improvement; no runtime behavior change. |
 | `autopilot` | Opt-in autonomous environment for Claude Code and Codex CLI: structured Stop-hook re-engage with budget caps (`SUNABA_AUTOPILOT_MAX_ITERS` / `_MINUTES` / `_CHANGED_FILES`), branch protection via `.githooks/pre-push`, operational planner / reviewer / verifier role files (Claude `.claude/agents/*.md` + Codex `.codex/agents/*.toml`), a subagent dispatch protocol document, `claudedocs/{plans,checkpoints}/`. **Changes agent runtime behavior** (Stop hook re-engages on verifier failure). Recommended invocation: `--stack harness --stack rules --stack autopilot` in that order so autopilot's operational role files override harness's seeds. Antigravity CLI (`agy`) status & caveats are documented — see `docs/agents/antigravity-autopilot.md`. |
@@ -302,7 +302,16 @@ before using `sunaba-cli` on sensitive work.
   `bash .claude/hooks/verify.sh` after every agent session. The hook is a
   template — review it like code. It can run any local command. The
   permissions list reduces approval prompts for routine tools, but it is
-  **not** a security boundary.
+  **not** a security boundary. A PreToolUse hook
+  (`.claude/hooks/pre-bash-guard.sh`, adapted from northraystudio/maruda)
+  denies recursive forced `rm` on `/`, `~` or a bare glob, force pushes to
+  `main`/`master` however the flags are spelled, and a short list of
+  irreversible infrastructure and database commands. It reads arguments
+  rather than prefixes, so `rm -fr /` and `git push origin main --force`
+  are caught, while `git push --force origin feat/x` is not. It is a
+  guard against mistakes, not against an agent that tries to evade it
+  (for example by writing a script and running that), and it needs `jq`
+  (present in the devcontainer image).
 
 Report vulnerabilities via GitHub Security Advisories or an issue — see
 [SECURITY.md](SECURITY.md).

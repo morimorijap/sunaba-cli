@@ -134,7 +134,7 @@ scripts/protect-branch.sh --dry-run && scripts/protect-branch.sh
 | `agents` | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` をホストから注入 |
 | `docker` | `docker-outside-of-docker` (ホストの Docker daemon にアクセス) |
 | `playwright` | Chromium + Linux 依存ライブラリ (Playwright / Chrome DevTools MCP の E2E 用) |
-| `harness` | Claude Code 向け harness テンプレート: `.claude/settings.json` (permissions + Stop hook)、silent-on-success な `verify.sh`、オンデマンド skill、planner / reviewer / verifier 役割定義、60行以内の ratchet `AGENTS.md`、`claudedocs/` トレースディレクトリ。**セッション境界での agent 挙動が変わるため opt-in。** |
+| `harness` | Claude Code 向け harness テンプレート: `.claude/settings.json` (permissions、破壊的なシェルコマンドを拒否する PreToolUse ガード、Stop hook)、silent-on-success な `verify.sh`、オンデマンド skill、planner / reviewer / verifier 役割定義、60行以内の ratchet `AGENTS.md`、`claudedocs/` トレースディレクトリ。**セッション境界での agent 挙動が変わるため opt-in。** |
 | `secrets` | Secret 漏洩防止スキャフォールド: `gitleaks` をリリースのコミット SHA で固定した `.pre-commit-config.yaml`、gitleaks のデフォルトルールを継承する `.gitleaks.toml`、CI scan workflow (action は SHA 固定、gitleaks は SHA-256 検証、全履歴スキャン)、`docs/secrets/` 配下のクラウド別ドキュメント (Vercel · Firebase · AWS · GCP · Azure Foundry → APIM → Gemini → Cosmos)。**コミット時挙動が変わる(検知時は `git commit` がブロック)ため opt-in。** |
 | `rules` | パススコープ付きルールを複数ターゲットに展開。`templates/rules/` のキャノニカル source 1 ファイルから `.cursor/rules/<name>.mdc`(Cursor の `globs:` / `alwaysApply:`)、`.claude/rules/<name>.md`(Claude の `paths:`)、`docs/agents/rules/<name>.md`(Codex / Gemini フォールバック)を生成。低リスクなコンテキスト改善で、ランタイム挙動は変わりません。 |
 | `autopilot` | Claude Code / Codex CLI 向けの opt-in な自走環境: budget cap (`SUNABA_AUTOPILOT_MAX_ITERS` / `_MINUTES` / `_CHANGED_FILES`)付き構造化 Stop hook 再起動、`.githooks/pre-push` によるブランチ保護、operational な planner / reviewer / verifier 役割定義(Claude `.claude/agents/*.md` + Codex `.codex/agents/*.toml`)、subagent dispatch protocol ドキュメント、`claudedocs/{plans,checkpoints}/`。**agent ランタイム挙動が変わる**(verifier 失敗時 Stop hook が再起動)。推奨呼び出し: `--stack harness --stack rules --stack autopilot` の順(autopilot の operational 役割定義が harness の seed を上書きするため)。Antigravity CLI(`agy`)の対応状況と注意点は `docs/agents/antigravity-autopilot.md` で扱う。 |
@@ -189,6 +189,13 @@ scripts/protect-branch.sh --dry-run && scripts/protect-branch.sh
   を走らせる Claude Code Stop hook を仕込みます。hook はテンプレートなので、コードと
   同じ目で review してください。任意のローカルコマンドを実行できます。permissions リストは
   ルーチン操作の承認プロンプトを減らしますが、**セキュリティ境界ではありません。**
+  PreToolUse hook (`.claude/hooks/pre-bash-guard.sh`、northraystudio/maruda 由来) は、
+  `/`・`~`・裸の glob に対する再帰・強制の `rm`、フラグの書き方によらず `main`/`master`
+  への force push、取り消せないインフラ・DB 操作の一部を拒否します。前方一致ではなく
+  引数を読むので、`rm -fr /` や `git push origin main --force` も止め、
+  `git push --force origin feat/x` は止めません。うっかりミスへの備えであり、回避を
+  試みるエージェント(スクリプトを書いて実行する等)は防げません。`jq` が必要です
+  (devcontainer イメージには入っています)。
 
 脆弱性の報告は [SECURITY.md](SECURITY.md) を参照してください。
 
