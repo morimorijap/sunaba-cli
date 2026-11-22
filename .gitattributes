@@ -1,0 +1,7 @@
+# Templates are copied byte-for-byte into generated projects, whose scripts
+# run in a Linux container. A Windows clone or `uv tool install git+...`
+# with core.autocrlf=true would otherwise check them out — and so generate
+# them — with CRLF.
+src/sunaba_cli/templates/** text eol=lf
+*.sh  text eol=lf
+*.py  text eol=lf

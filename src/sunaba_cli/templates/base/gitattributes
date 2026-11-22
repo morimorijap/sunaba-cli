@@ -1,0 +1,16 @@
+# Line endings for files that run inside the Linux devcontainer.
+#
+# A Windows clone with core.autocrlf=true checks text files out with CRLF.
+# A shell script with CRLF fails in the container ("bad interpreter" or
+# "$'\r': command not found"), and so do hook scripts and Dockerfile RUN
+# lines. These patterns keep LF in the working tree on every platform.
+#
+# Written by `sunaba new` only; `sunaba rebuild` leaves this file alone,
+# so add your own patterns below.
+
+*.sh          text eol=lf
+*.bash        text eol=lf
+*.py          text eol=lf
+Dockerfile    text eol=lf
+*.Dockerfile  text eol=lf
+.githooks/*   text eol=lf
