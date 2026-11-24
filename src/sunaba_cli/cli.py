@@ -181,8 +181,13 @@ def _default_gitignore() -> str:
         "\n"
         "# Agent-local state\n"
         ".claude/settings.local.json\n"
-        ".codex/\n"
         ".gemini/\n"
+        "# Codex CLI: commit the project config the autopilot stack generates,\n"
+        "# ignore everything else Codex may write here.\n"
+        ".codex/*\n"
+        "!.codex/config.toml\n"
+        "!.codex/agents/\n"
+        "!.codex/hooks/\n"
         "\n"
         "# Build / cache\n"
         ".venv/\n"
@@ -1022,6 +1027,13 @@ def sync(name: str | None, sync_all_flag: bool):
         raise SystemExit(1)
 
 
+# Old baseline line -> the baseline line that replaced it.
+# `.codex/` ignored the whole directory, so git never looked inside it and
+# the `!.codex/...` re-includes could not take effect; the autopilot
+# stack's `.codex/config.toml`, `agents/` and `hooks/` were never committed.
+_RETIRED_GITIGNORE_LINES = {".codex/": ".codex/*"}
+
+
 def _merge_gitignore(existing: str, baseline: str) -> tuple[str, list[str]]:
     """Merge `baseline` into `existing`, preserving user lines that are
     not already present. Returns (merged_text, added_lines).
@@ -1035,6 +1047,12 @@ def _merge_gitignore(existing: str, baseline: str) -> tuple[str, list[str]]:
     baseline_pattern_lines = {
         ln.strip() for ln in baseline_lines if ln.strip() and not ln.lstrip().startswith("#")
     }
+    # Lines an older baseline wrote and the current one replaced. Keeping
+    # them would undo the replacement, so they are dropped, not preserved.
+    retired = {
+        old for old, replacement in _RETIRED_GITIGNORE_LINES.items()
+        if replacement in baseline_pattern_lines
+    }
     existing_lines = existing.splitlines()
     extras: list[str] = []
     for ln in existing_lines:
@@ -1043,7 +1061,7 @@ def _merge_gitignore(existing: str, baseline: str) -> tuple[str, list[str]]:
             continue
         if stripped.startswith("#"):
             continue
-        if stripped in baseline_pattern_lines:
+        if stripped in baseline_pattern_lines or stripped in retired:
             continue
         extras.append(ln)
     merged = baseline.rstrip("\n") + "\n"

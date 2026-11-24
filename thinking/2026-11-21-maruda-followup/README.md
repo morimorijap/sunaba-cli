@@ -90,7 +90,15 @@ guidance. Revisit if sunaba gains an Express stack.
 The baseline `.gitignore` ignores `.codex/`, but `--stack autopilot`
 generates `.codex/config.toml`, `.codex/agents/*.toml` and
 `.codex/hooks/verify.sh`. They are never committed, so teammates and CI
-do not get them. Noted in #30; needs its own fix.
+do not get them. Noted in #30.
+
+Fixed separately (`fix/commit-codex-project-config`): the baseline now
+ignores `.codex/*` and re-includes `config.toml`, `agents/` and `hooks/`.
+An allowlist, not a list of Codex's state files, so anything else Codex
+writes there stays out of git without sunaba tracking its file names.
+`sync-gitignore` replaces an old `.codex/` line instead of preserving it
+as a user line: git does not look inside an ignored directory, so the
+re-includes would never apply while it remains.
 
 ## Sources
 
