@@ -10,6 +10,7 @@ from pathlib import Path
 
 import click
 
+from . import regen
 from .compose import TEMPLATES_DIR, available_stacks, compose, stack_description
 from .sync import (
     copy_agent_files,
@@ -677,23 +678,6 @@ def _write_files(project_dir: Path, files: dict[str, str]) -> list[str]:
     return written
 
 
-def _diff_files(project_dir: Path, files: dict[str, str]) -> dict[str, str]:
-    """Return {relpath: status} where status is 'new', 'modified', or 'unchanged'."""
-    diff = {}
-    for relpath, content in files.items():
-        full = _safe_target(project_dir, relpath)
-        if not full.exists():
-            diff[relpath] = "new"
-        elif full.is_symlink():
-            # Surface as modified so the user sees it in the diff; write path rejects it.
-            diff[relpath] = "modified"
-        elif full.read_text() != content:
-            diff[relpath] = "modified"
-        else:
-            diff[relpath] = "unchanged"
-    return diff
-
-
 @click.group()
 @click.version_option(version="0.3.0")
 def main():
@@ -760,6 +744,7 @@ def new(
     written = _write_files(project_dir, files)
     for relpath in written:
         click.echo(f"  Created {relpath}")
+    _write_files(project_dir, {regen.MANIFEST_PATH: regen.manifest_text(files)})
 
     if not no_agents:
         # Skip agent files that a stack `_files` map already wrote so we don't
@@ -863,6 +848,12 @@ def register(path: str, stack: tuple[str, ...], name: str | None):
 @click.option("--remove", multiple=True, help="Remove stack(s) from current list.")
 @click.option("--dry-run", is_flag=True, default=False, help="Show diff without writing.")
 @click.option("--yes", "-y", is_flag=True, default=False, help="Skip confirmation.")
+@click.option(
+    "--overwrite",
+    is_flag=True,
+    default=False,
+    help="Replace locally edited files instead of writing <path>.new proposals.",
+)
 def rebuild(
     name_or_path: str,
     stack: tuple[str, ...],
@@ -870,6 +861,7 @@ def rebuild(
     remove: tuple[str, ...],
     dry_run: bool,
     yes: bool,
+    overwrite: bool,
 ):
     """Rebuild an existing sandbox with a new stack configuration.
 
@@ -883,6 +875,14 @@ def rebuild(
         sunaba rebuild myapp --remove docker                # remove stack
         sunaba rebuild /path/to/project --stack python     # auto-register + rebuild
         sunaba rebuild myapp --add gcp --dry-run            # preview only
+
+    Files you edited are not overwritten: the regenerated version is written
+    next to them as <path>.new for you to merge (pass --overwrite to replace
+    them instead). `.claude/settings.json` is merged: entries the new
+    templates add are appended, yours are kept. The SUNABA USER region of
+    agent files always carries over. sunaba tells your edits from its own
+    output with `.sunaba/generated.json`; projects created before it existed
+    get .new proposals for every file that differs.
     """
     try:
         name, project_dir, current_stacks = _resolve_target(name_or_path)
@@ -923,16 +923,36 @@ def rebuild(
     click.echo("")
 
     files = _build_config_files(name, new_stacks)
-    diff = _diff_files(project_dir, files)
+    manifest = regen.load_manifest(project_dir)
+    steps = regen.plan(
+        project_dir,
+        files,
+        manifest,
+        overwrite=overwrite,
+        safe_target=_safe_target,
+        splice_user_region=_splice_user_region,
+    )
+    manifest_new = regen.manifest_text(files, steps, manifest)
+    manifest_path = _safe_target(project_dir, regen.MANIFEST_PATH)
+    manifest_stale = not manifest_path.is_file() or manifest_path.read_text() != manifest_new
 
     click.echo("Changes:")
-    for relpath, status in diff.items():
-        marker = {"new": "+", "modified": "~", "unchanged": "="}[status]
-        click.echo(f"  {marker} {relpath} ({status})")
+    markers = {"create": "+", "update": "~", "unchanged": "=", "propose": "!", "merge": "*"}
+    for step in steps:
+        detail = f": {step.detail}" if step.detail else ""
+        click.echo(f"  {markers[step.action]} {step.relpath} ({step.action}{detail})")
+    if manifest is None and not overwrite:
+        click.echo(
+            f"\nNo {regen.MANIFEST_PATH} yet (project created before sunaba recorded its "
+            "output), so every file that differs is treated as edited and proposed as .new. "
+            "Pass --overwrite to replace them instead."
+        )
 
-    has_changes = any(s != "unchanged" for s in diff.values())
-    if not has_changes:
+    writes = {s.dest: s.content for s in steps if s.content is not None}
+    if not writes:
         click.echo("\nNothing to change.")
+        if not dry_run and manifest_stale:
+            _write_files(project_dir, {regen.MANIFEST_PATH: manifest_new})
         # Still update registry if stacks metadata changed
         if new_stacks != current_stacks:
             register_project(name, project_dir, new_stacks)
@@ -948,8 +968,15 @@ def rebuild(
             click.echo("Aborted.")
             return
 
-    written = _write_files(project_dir, files)
+    written = _write_files(project_dir, writes)
+    _write_files(project_dir, {regen.MANIFEST_PATH: manifest_new})
     click.echo(f"\nWrote {len(written)} file(s).")
+    proposals = [s.dest for s in steps if s.action == "propose" and s.dest]
+    if proposals:
+        click.echo("\nKept your version of these files; review the regenerated one and merge:")
+        for dest in proposals:
+            base = dest[: -len(regen.PROPOSAL_SUFFIX)]
+            click.echo(f"  diff {base} {dest}   # then delete {dest}")
     register_project(name, project_dir, new_stacks)
     click.echo(f"Registry updated. Project now uses: {', '.join(new_stacks)}")
 

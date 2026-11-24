@@ -177,23 +177,44 @@ sunaba rebuild myapp --add gcp --dry-run
 
 # Skip confirmation
 sunaba rebuild myapp --add neon -y
+
+# Replace files you edited instead of proposing .new files
+sunaba rebuild myapp --overwrite
 ```
 
 Output:
 
 ```
 Project: myapp (/Users/me/projects/myapp)
-  Current stacks: python
-  New stacks:     python, nextjs
+  Current stacks: python, harness
+  New stacks:     python, harness, nextjs
 
 Changes:
-  ~ .devcontainer/devcontainer.json (modified)
-  ~ .devcontainer/bootstrap.sh (modified)
-  ~ .github/dependabot.yml (modified)
+  ~ .devcontainer/devcontainer.json (update)
+  ! .devcontainer/bootstrap.sh (propose: edited locally -> .devcontainer/bootstrap.sh.new)
+  * .claude/settings.json (merge: added hooks.PreToolUse: bash "$CLAUDE_PROJECT_DIR/...")
   = .vscode/settings.json (unchanged)
 
 Apply these changes? [y/N]:
 ```
+
+`rebuild` does not overwrite your edits. `sunaba new` records a
+fingerprint of every file it generates in `.sunaba/generated.json`
+(commit it), and `rebuild` compares against it:
+
+| Marker | When | What happens |
+|---|---|---|
+| `+` create | The file does not exist | Written |
+| `~` update | The file is as sunaba last generated it | Replaced with the new version |
+| `!` propose | You edited the file, or it is not in the record | Your file is kept; the new version is written beside it as `<path>.new`. Diff, merge, delete the `.new` |
+| `*` merge | `.claude/settings.json` you edited | Entries the templates newly add (permissions, hooks) are appended; yours are kept, and entries you removed stay removed. Without a record, new `allow` rules are never added |
+| `=` unchanged | Nothing differs | — |
+
+The `<!-- SUNABA USER START/END -->` region of `AGENTS.md`, `CLAUDE.md`
+and `skills.md` is always carried over and never counts as an edit.
+Projects created before 0.4 have no record, so their first `rebuild`
+proposes `.new` for every file that differs; `--overwrite` restores the
+old replace-everything behavior.
 
 ## What gets generated
 
