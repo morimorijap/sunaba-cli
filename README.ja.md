@@ -113,7 +113,7 @@ scripts/protect-branch.sh --dry-run && scripts/protect-branch.sh
 | コマンド | 用途 |
 |---|---|
 | `sunaba new <name>` | 新規 sandbox プロジェクト作成 |
-| `sunaba rebuild <name\|path>` | 既存プロジェクトの stack を変更 |
+| `sunaba rebuild <name\|path>` | 既存プロジェクトの stack を変更。手で編集したファイルは上書きせず `<path>.new` を横に出し、`.claude/settings.json` は追加分だけマージ (`--overwrite` で従来どおり置き換え) |
 | `sunaba register <path> --stack ...` | 既存プロジェクトを registry に追加 |
 | `sunaba list` | 登録済みプロジェクト一覧 |
 | `sunaba stacks` | 利用可能な stack 一覧 |
