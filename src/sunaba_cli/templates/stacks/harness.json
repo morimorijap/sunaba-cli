@@ -1,8 +1,10 @@
 {
-  "_description": "Claude Code-oriented harness: permissions, Stop hook, on-demand skills, sub-agent role files, a 60-line ratchet AGENTS.md, and a claudedocs trace directory. Opt-in because it changes agent behavior.",
+  "_description": "Claude Code-oriented harness: permissions, a PreToolUse guard against destructive shell commands, Stop hook, on-demand skills, sub-agent role files, a 60-line ratchet AGENTS.md, and a claudedocs trace directory. Opt-in because it changes agent behavior.",
   "_files": {
     ".claude/settings.json":                       "harness/claude/settings.json",
     ".claude/hooks/verify.sh":                     "harness/claude/hooks/verify.sh",
+    ".claude/hooks/pre-bash-guard.sh":             "harness/claude/hooks/pre-bash-guard.sh",
+    ".claude/hooks/THIRD_PARTY_NOTICES.md":        "harness/claude/hooks/THIRD_PARTY_NOTICES.md",
     ".claude/skills/impact-map/SKILL.md":          "harness/claude/skills/impact-map/SKILL.md",
     ".claude/skills/verify-change/SKILL.md":       "harness/claude/skills/verify-change/SKILL.md",
     ".claude/agents/planner.md":                   "harness/claude/agents/planner.md",

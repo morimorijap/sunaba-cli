@@ -5,6 +5,7 @@ carries a header comment naming its upstream source. Credit does not
 imply that the upstream authors endorse `sunaba-cli`.
 
 Generated projects get their own copy of the relevant notices:
+`--stack harness` emits `.claude/hooks/THIRD_PARTY_NOTICES.md`,
 `--stack secrets` emits `docs/secrets/THIRD_PARTY_NOTICES.md` and
 `--stack security-ci` emits `docs/security/THIRD_PARTY_NOTICES.md`, so
 the license travels with the adapted files it covers.
@@ -32,6 +33,8 @@ the license travels with the adapted files it covers.
 | `src/sunaba_cli/templates/security-ci/docs/README.md` | `README.md` (L147-156) | The gate maturity ladder |
 | `src/sunaba_cli/templates/security-ci/github-workflow-security-scan.yml` (also `.github/workflows/security-scan.yml`), at `5f9b323` | `harness/templates/github/security-scan.yml` (L80-88) | Passing `--config .semgrep` only when it holds a rule file that is not a `*.test.yml` / `*.test.yaml` fixture |
 | `src/sunaba_cli/templates/security-ci/docs/README.md` ("Project rules"), at `5f9b323` | `docs/semgrep-rules.md` | One rule per `semgrep --test` fixture; YAML fixtures named `*.test.yaml`; standard `metadata:` keys; authorization and business logic are not rules |
+| `src/sunaba_cli/templates/harness/claude/hooks/pre-bash-guard.sh`, at `5f9b323` | `harness/templates/hooks/pre-bash-guard.sh` | The whole hook: argument-level `rm` / `git push` judgement, redirection stripping, substitution collapsing, the regex floor, the deny list. sunaba drops the pip toggle and reports a missing `jq` |
+| `tests/test_bash_guard.py`, at `5f9b323` | `harness/tests/run.sh` (L193-279, L283-299) | The deny/allow matrix and the no-temp-file and broken-input checks |
 
 ```
 MIT License
