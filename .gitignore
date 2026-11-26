@@ -11,3 +11,6 @@ build/
 .env
 .env.local
 .claude/settings.json
+
+# Local temporary files (see CLAUDE.md)
+tmp/
