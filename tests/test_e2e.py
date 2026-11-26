@@ -593,6 +593,78 @@ def test_sync_gitignore_writes_baseline_and_preserves_user_lines(tmp_path, isola
     assert "my-custom-dir/" in final
 
 
+_CODEX_PROJECT_FILES = [
+    ".codex/config.toml",
+    ".codex/agents/planner.toml",
+    ".codex/agents/reviewer.toml",
+    ".codex/agents/verifier.toml",
+    ".codex/hooks/verify.sh",
+]
+
+
+def _git_tracked_after_add(project: Path) -> set[str]:
+    def git(*args: str) -> str:
+        return subprocess.run(
+            ["git", *args], cwd=project, check=True, capture_output=True, text=True,
+        ).stdout
+    git("init", "-q")
+    git("add", "-A")
+    return set(git("ls-files").splitlines())
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
+def test_autopilot_codex_config_is_committed_and_codex_state_is_not(tmp_path, isolated_registry):
+    """Regression: the baseline ignored `.codex/`, so the autopilot stack's
+    Codex config, agents and Stop hook never reached the repository."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    r = _run(
+        ["new", "cx", "--stack", "autopilot", "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert r.returncode == 0, r.stderr
+    project = workspace / "cx"
+    # Whatever else Codex may write into the project directory stays local.
+    local = [".codex/auth.json", ".codex/history.jsonl", ".codex/sessions/s.jsonl",
+             ".codex/log/codex.log", ".codex/notes.md"]
+    for rel in local:
+        (project / rel).parent.mkdir(parents=True, exist_ok=True)
+        (project / rel).write_text("local\n")
+
+    tracked = _git_tracked_after_add(project)
+
+    missing = [rel for rel in _CODEX_PROJECT_FILES if rel not in tracked]
+    assert not missing, f"generated Codex files not committed: {missing}"
+    leaked = [rel for rel in local if rel in tracked]
+    assert not leaked, f"Codex local state committed: {leaked}"
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
+def test_sync_gitignore_lets_existing_projects_commit_codex_config(tmp_path, isolated_registry):
+    """A project created with the old baseline has `.codex/`; keeping that
+    line as a "user line" would keep ignoring the whole directory."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    r1 = _run(
+        ["new", "cxo", "--stack", "autopilot", "--no-devcontainer", "--no-prompt"],
+        cwd=workspace,
+    )
+    assert r1.returncode == 0, r1.stderr
+    project = workspace / "cxo"
+    gi = project / ".gitignore"
+    old = gi.read_text().replace(".codex/*\n", ".codex/\n")
+    gi.write_text(old + "my-custom-dir/\n")
+
+    r2 = _run(["sync-gitignore", "cxo"], cwd=workspace)
+    assert r2.returncode == 0, f"stderr: {r2.stderr}\nstdout: {r2.stdout}"
+    lines = gi.read_text().splitlines()
+    assert ".codex/" not in lines
+    assert "my-custom-dir/" in lines
+
+    tracked = _git_tracked_after_add(project)
+    assert set(_CODEX_PROJECT_FILES) <= tracked
+
+
 def test_rebuild_does_not_overwrite_gitignore(tmp_path, isolated_registry):
     """User edits to `.gitignore` survive `sunaba rebuild`."""
     workspace = tmp_path / "workspace"
@@ -676,8 +748,7 @@ def test_sunaba_new_keeps_scripts_lf_under_autocrlf(tmp_path, isolated_registry)
     scripts = [
         ".devcontainer/bootstrap.sh",
         ".claude/hooks/verify.sh",
-        # .codex/hooks/verify.sh is generated too, but the baseline
-        # .gitignore excludes .codex/, so git never checks it out.
+        ".codex/hooks/verify.sh",
         ".githooks/pre-push",
         "scripts/install-githooks.sh",
         "scripts/agent-task.py",
